@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hybridgroup/gobot/gobottest"
-	"github.com/hybridgroup/gobot/sysfs"
+	"github.com/potix/gobot/gobottest"
+	"github.com/potix/gobot/sysfs"
 )
 
 type NullReadWriteCloser struct {

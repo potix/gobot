@@ -162,7 +162,7 @@ func adaptor() string {
 	return `package {{.Package}}
 
 import (
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Adaptor = (*{{.UpperName}}Adaptor)(nil)
@@ -193,7 +193,7 @@ func driver() string {
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*{{.UpperName}}Driver)(nil)
@@ -278,7 +278,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/hybridgroup/gobot"
+  "github.com/potix/gobot"
 )
 
 func main() {
@@ -317,7 +317,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 func Test{{.UpperName}}Driver(t *testing.T) {
@@ -369,7 +369,7 @@ func adaptorTest() string {
 import (
 	"testing"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 func Test{{.UpperName}}Adaptor(t *testing.T) {
@@ -396,7 +396,7 @@ Gobot (http://gobot.io/) is a framework for robotics and physical computing usin
 This repository contains the Gobot adaptor and driver for {{.Package}}.
 
 For more information about Gobot, check out the github repo at
-https://github.com/hybridgroup/gobot
+https://github.com/potix/gobot
 
 ## Installing
 ` + "```bash\ngo get path/to/repo/{{.Package}}\n```" + `

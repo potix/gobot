@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot/gobottest"
 )
 
 type NullReadWriteCloser struct{}

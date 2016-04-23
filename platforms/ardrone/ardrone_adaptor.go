@@ -2,7 +2,7 @@ package ardrone
 
 import (
 	client "github.com/hybridgroup/go-ardrone/client"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Adaptor = (*ArdroneAdaptor)(nil)

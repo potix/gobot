@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/chip"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/chip"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

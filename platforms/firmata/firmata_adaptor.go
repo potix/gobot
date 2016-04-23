@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/firmata/client"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/hybridgroup/gobot/platforms/i2c"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/firmata/client"
+	"github.com/potix/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/i2c"
 	"github.com/tarm/goserial"
 )
 

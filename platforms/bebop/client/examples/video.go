@@ -21,7 +21,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/hybridgroup/gobot/platforms/bebop/client"
+	"github.com/potix/gobot/platforms/bebop/client"
 )
 
 func main() {

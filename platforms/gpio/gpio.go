@@ -3,7 +3,7 @@ package gpio
 import (
 	"errors"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var (

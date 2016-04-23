@@ -4,9 +4,9 @@ import (
 	"time"
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/firmata"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/firmata"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

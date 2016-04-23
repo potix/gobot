@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 var _ gobot.Adaptor = (*DigisparkAdaptor)(nil)

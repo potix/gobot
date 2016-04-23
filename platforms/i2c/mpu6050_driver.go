@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*MPU6050Driver)(nil)

@@ -1,7 +1,7 @@
 package pebble
 
 import (
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Adaptor = (*PebbleAdaptor)(nil)

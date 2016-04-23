@@ -6,7 +6,7 @@ import (
 	"time"
 
 	cv "github.com/lazywei/go-opencv/opencv"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*CameraDriver)(nil)

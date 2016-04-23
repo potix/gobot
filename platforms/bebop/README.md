@@ -5,7 +5,7 @@ The Bebop from Parrot is an inexpensive quadcopter that is controlled using WiFi
 
 ## How to Install
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/bebop
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/bebop
 ```
 
 ## How to Use
@@ -15,8 +15,8 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/bebop"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/bebop"
 )
 
 func main() {

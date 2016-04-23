@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot/gobottest"
 )
 
 func TestFilesystemOpen(t *testing.T) {

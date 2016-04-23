@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hybridgroup/gobot/platforms/firmata/client"
+	"github.com/potix/gobot/platforms/firmata/client"
 	"github.com/tarm/goserial"
 )
 

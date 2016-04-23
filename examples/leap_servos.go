@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/firmata"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/hybridgroup/gobot/platforms/leap"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/firmata"
+	"github.com/potix/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/leap"
 )
 
 // Video: https://www.youtube.com/watch?v=ayNMyUfdAqc

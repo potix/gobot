@@ -13,7 +13,7 @@ Basic Setup
       "fmt"
       "time"
 
-      "github.com/hybridgroup/gobot"
+      "github.com/potix/gobot"
     )
 
     func main() {
@@ -37,9 +37,9 @@ Blinking an LED (Hello Eve!)
     import (
     	"time"
 
-    	"github.com/hybridgroup/gobot"
-    	"github.com/hybridgroup/gobot/platforms/firmata"
-    	"github.com/hybridgroup/gobot/platforms/gpio"
+    	"github.com/potix/gobot"
+    	"github.com/potix/gobot/platforms/firmata"
+    	"github.com/potix/gobot/platforms/gpio"
     )
 
     func main() {
@@ -76,8 +76,8 @@ web service.
     import (
     	"fmt"
 
-    	"github.com/hybridgroup/gobot"
-    	"github.com/hybridgroup/gobot/api"
+    	"github.com/potix/gobot"
+    	"github.com/potix/gobot/api"
     )
 
     func main() {

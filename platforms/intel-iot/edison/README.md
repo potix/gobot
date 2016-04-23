@@ -54,9 +54,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/hybridgroup/gobot/platforms/intel-iot/edison"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/intel-iot/edison"
 )
 
 func main() {
@@ -83,7 +83,7 @@ func main() {
 }
 ```
 
-You can read the [full API documentation online](http://godoc.org/github.com/hybridgroup/gobot).
+You can read the [full API documentation online](http://godoc.org/github.com/potix/gobot).
 
 #### Cross compiling for the Intel Edison
 

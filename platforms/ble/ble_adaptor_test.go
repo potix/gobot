@@ -3,7 +3,7 @@ package ble
 import (
 	"testing"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 func initTestBLEAdaptor() *BLEAdaptor {

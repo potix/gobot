@@ -3,7 +3,7 @@ package neurosky
 import (
 	"bytes"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*NeuroskyDriver)(nil)

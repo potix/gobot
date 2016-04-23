@@ -3,7 +3,7 @@ package gpio
 import (
 	"strconv"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*DirectPinDriver)(nil)

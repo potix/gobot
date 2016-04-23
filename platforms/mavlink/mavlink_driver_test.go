@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/gobottest"
-	common "github.com/hybridgroup/gobot/platforms/mavlink/common"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/gobottest"
+	common "github.com/potix/gobot/platforms/mavlink/common"
 )
 
 func initTestMavlinkDriver() *MavlinkDriver {

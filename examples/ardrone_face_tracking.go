@@ -8,9 +8,9 @@ import (
 	"time"
 
 	cv "github.com/lazywei/go-opencv/opencv"
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/ardrone"
-	"github.com/hybridgroup/gobot/platforms/opencv"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/ardrone"
+	"github.com/potix/gobot/platforms/opencv"
 )
 
 func main() {

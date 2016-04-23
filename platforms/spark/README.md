@@ -9,7 +9,7 @@ For more info about the Spark platform click [here](https://www.spark.io/)
 Installing Gobot with Spark support is pretty easy.
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/spark
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/spark
 ```
 
 ## How to Use
@@ -20,9 +20,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/hybridgroup/gobot/platforms/spark"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/spark"
 )
 
 func main() {

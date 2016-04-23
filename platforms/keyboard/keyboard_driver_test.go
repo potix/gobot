@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/gobottest"
 )
 
 func initTestKeyboardDriver() *KeyboardDriver {

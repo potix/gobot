@@ -33,7 +33,7 @@ Follow the official [OpenCV installation guide](http://docs.opencv.org/doc/tutor
 
 Now you can install the package with
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/opencv
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/opencv
 ```
 
 ## How to Use
@@ -45,8 +45,8 @@ package main
 
 import (
 	cv "github.com/lazywei/go-opencv/opencv"
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/opencv"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/opencv"
 )
 
 func main() {

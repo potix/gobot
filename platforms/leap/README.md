@@ -11,7 +11,7 @@ First install the [Leap Motion Software](https://www.leapmotion.com/setup)
 Now you can install the package with:
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/leap
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/leap
 ```
 
 ## How to Use
@@ -22,8 +22,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/leap"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/leap"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot/gobottest"
 )
 
 func initTestMqttAdaptor() *MqttAdaptor {

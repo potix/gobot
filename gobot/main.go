@@ -4,14 +4,14 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "gobot"
 	app.Author = "The Gobot team"
-	app.Email = "https://github.com/hybridgroup/gobot"
+	app.Email = "https://github.com/potix/gobot"
 	app.Version = gobot.Version()
 	app.Usage = "Command Line Utility for Gobot"
 	app.Commands = []cli.Command{

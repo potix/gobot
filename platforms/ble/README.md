@@ -8,7 +8,7 @@ Learn more about Bluetooth LE [here](http://en.wikipedia.org/wiki/Bluetooth_low_
 
 ## How to Install
 ```
-go get github.com/hybridgroup/gobot && go install github.com/hybridgroup/gobot/platforms/ble
+go get github.com/potix/gobot && go install github.com/potix/gobot/platforms/ble
 ```
 
 ## How To Connect

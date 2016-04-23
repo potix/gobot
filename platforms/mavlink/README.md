@@ -5,7 +5,7 @@ For information on the MAVlink communication protocol click [here](http://qgroun
 ## How to Install
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/mavlink
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/mavlink
 
 ```
 
@@ -17,9 +17,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/mavlink"
-	common "github.com/hybridgroup/gobot/platforms/mavlink/common"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/mavlink"
+	common "github.com/potix/gobot/platforms/mavlink/common"
 )
 
 func main() {

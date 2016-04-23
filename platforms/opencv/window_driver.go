@@ -2,7 +2,7 @@ package opencv
 
 import (
 	cv "github.com/lazywei/go-opencv/opencv"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*WindowDriver)(nil)

@@ -8,7 +8,7 @@ Learn more about the Sphero robot from Orbotix [here](http://www.gosphero.com/).
 
 ## How to Install
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/sphero
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/sphero
 ```
 
 ## How To Connect
@@ -53,8 +53,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/sphero"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/sphero"
 )
 
 func main() {

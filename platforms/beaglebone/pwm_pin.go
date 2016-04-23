@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hybridgroup/gobot/sysfs"
+	"github.com/potix/gobot/sysfs"
 )
 
 type pwmPin struct {

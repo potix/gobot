@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Driver = (*SpheroDriver)(nil)

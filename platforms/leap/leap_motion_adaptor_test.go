@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot/gobottest"
 )
 
 func initTestLeapMotionAdaptor() *LeapMotionAdaptor {

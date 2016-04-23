@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/firmata"
-	"github.com/hybridgroup/gobot/platforms/i2c"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/firmata"
+	"github.com/potix/gobot/platforms/i2c"
 )
 
 func main() {

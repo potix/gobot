@@ -1,7 +1,7 @@
 package i2c
 
 import (
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 
 	"bytes"
 	"encoding/binary"

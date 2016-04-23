@@ -2,7 +2,7 @@ package ble
 
 import (
 	"fmt"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 	"github.com/paypal/gatt"
 	"log"
 	"strings"

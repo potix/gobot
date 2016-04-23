@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/keyboard"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/keyboard"
 )
 
 func main() {

@@ -8,7 +8,7 @@ This package contains the Gobot adaptor and driver for the [Neurosky Mindwave Mo
 Installing Gobot with Neurosky support is pretty easy.
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/neurosky
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/neurosky
 ```
 
 ## How To Connect
@@ -52,8 +52,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/neurosky"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/neurosky"
 )
 
 func main() {

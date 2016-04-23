@@ -11,7 +11,7 @@ For more info about the MQTT machine to machine messaging standard, go to http:/
 Install running:
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/mqtt
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/mqtt
 ```
 
 ## How to Use
@@ -22,8 +22,8 @@ Before running the example, make sure you have an MQTT message broker running so
 package main
 
 import (
-  "github.com/hybridgroup/gobot"
-  "github.com/hybridgroup/gobot/platforms/mqtt"
+  "github.com/potix/gobot"
+  "github.com/potix/gobot/platforms/mqtt"
   "fmt"
   "time"
 )
@@ -67,7 +67,7 @@ func main() {
 
 ## Contributing
 
-For our contribution guidelines, please go to https://github.com/hybridgroup/gobot/blob/master/CONTRIBUTING.md
+For our contribution guidelines, please go to https://github.com/potix/gobot/blob/master/CONTRIBUTING.md
 
 ## License
 

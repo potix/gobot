@@ -1,6 +1,6 @@
 package i2c
 
-import "github.com/hybridgroup/gobot"
+import "github.com/potix/gobot"
 
 var _ gobot.Driver = (*HMC6352Driver)(nil)
 

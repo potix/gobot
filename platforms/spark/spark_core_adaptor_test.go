@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/donovanhide/eventsource"
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/gobottest"
 )
 
 // HELPERS

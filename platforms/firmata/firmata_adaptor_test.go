@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/gobottest"
-	"github.com/hybridgroup/gobot/platforms/firmata/client"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/gobottest"
+	"github.com/potix/gobot/platforms/firmata/client"
 )
 
 type readWriteCloser struct{}

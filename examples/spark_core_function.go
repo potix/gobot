@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/spark"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/spark"
 )
 
 func main() {

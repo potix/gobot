@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hybridgroup/gobot/gobottest"
+	"github.com/potix/gobot/gobottest"
 )
 
 // --------- HELPERS

@@ -3,8 +3,8 @@ package mavlink
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	common "github.com/hybridgroup/gobot/platforms/mavlink/common"
+	"github.com/potix/gobot"
+	common "github.com/potix/gobot/platforms/mavlink/common"
 )
 
 var _ gobot.Driver = (*MavlinkDriver)(nil)

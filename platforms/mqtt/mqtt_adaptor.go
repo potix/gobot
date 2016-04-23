@@ -2,7 +2,7 @@ package mqtt
 
 import (
 	"git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-	"github.com/hybridgroup/gobot"
+	"github.com/potix/gobot"
 )
 
 var _ gobot.Adaptor = (*MqttAdaptor)(nil)

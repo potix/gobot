@@ -3,10 +3,10 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/api"
-	"github.com/hybridgroup/gobot/platforms/gpio"
-	"github.com/hybridgroup/gobot/platforms/spark"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/api"
+	"github.com/potix/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/spark"
 )
 
 func main() {

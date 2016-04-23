@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/ble"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/ble"
 )
 
 func main() {

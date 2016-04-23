@@ -9,7 +9,7 @@ For more info about the arduino platform click [here](http://arduino.cc/).
 ## How to Install
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/firmata
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/firmata
 ```
 
 ## How to Use
@@ -20,9 +20,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/firmata"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/firmata"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

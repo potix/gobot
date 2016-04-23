@@ -3,7 +3,7 @@ Package neurosky contains the Gobot adaptor and driver for the Neurosky Mindwave
 
 Installing:
 
-	go get github.com/hybridgroup/gobot/platforms/neurosky
+	go get github.com/potix/gobot/platforms/neurosky
 
 Example:
 
@@ -12,8 +12,8 @@ Example:
 	import (
 		"fmt"
 
-		"github.com/hybridgroup/gobot"
-		"github.com/hybridgroup/gobot/platforms/neurosky"
+		"github.com/potix/gobot"
+		"github.com/potix/gobot/platforms/neurosky"
 	)
 
 	func main() {
@@ -66,6 +66,6 @@ Example:
 	}
 
 For further information refer to neuroky README:
-https://github.com/hybridgroup/gobot/blob/master/platforms/neurosky/README.md
+https://github.com/potix/gobot/blob/master/platforms/neurosky/README.md
 */
 package neurosky

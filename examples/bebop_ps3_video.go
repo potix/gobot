@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/bebop"
-	"github.com/hybridgroup/gobot/platforms/joystick"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/bebop"
+	"github.com/potix/gobot/platforms/joystick"
 )
 
 type pair struct {

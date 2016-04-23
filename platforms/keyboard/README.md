@@ -5,7 +5,7 @@ This module implements support for keyboard events, wrapping the `stty` utility.
 ## How to Install
 
 ```
-go get github.com/hybridgroup/gobot && go install github.com/hybridgroup/gobot/platforms/ardrone
+go get github.com/potix/gobot && go install github.com/potix/gobot/platforms/ardrone
 ```
 
 ## How to Use
@@ -18,8 +18,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/keyboard"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/keyboard"
 )
 
 func main() {

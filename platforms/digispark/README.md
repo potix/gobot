@@ -27,7 +27,7 @@ $ sudo apt-get install libusb-dev
 Now you can install the package with
 
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/digispark
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/digispark
 ```
 
 ## How to Use
@@ -38,9 +38,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/digispark"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/digispark"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

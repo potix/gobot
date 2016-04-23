@@ -6,7 +6,7 @@ For more info about the BeagleBone platform click [here](http://beagleboard.org/
 
 ## How to Install
 ```
-go get -d -u github.com/hybridgroup/gobot/... && go install github.com/hybridgroup/gobot/platforms/beaglebone
+go get -d -u github.com/potix/gobot/... && go install github.com/potix/gobot/platforms/beaglebone
 ```
 
 ## Cross compiling for the Beaglebone Black
@@ -38,9 +38,9 @@ package main
 import (
 	"time"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/beaglebone"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/beaglebone"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/hybridgroup/gobot/platforms/beaglebone"
-	"github.com/hybridgroup/gobot/platforms/gpio"
+	"github.com/potix/gobot/platforms/beaglebone"
+	"github.com/potix/gobot/platforms/gpio"
 )
 
 func main() {

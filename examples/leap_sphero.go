@@ -3,9 +3,9 @@ package main
 import (
 	"math"
 
-	"github.com/hybridgroup/gobot"
-	"github.com/hybridgroup/gobot/platforms/leap"
-	"github.com/hybridgroup/gobot/platforms/sphero"
+	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/leap"
+	"github.com/potix/gobot/platforms/sphero"
 )
 
 func main() {
