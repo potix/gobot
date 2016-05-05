@@ -212,7 +212,6 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	if !ok {
 		return errors.New("not found characteristic")
 	}
-	fmt.Printf("char = %s\n", blec.uuid)
 	value := make([]byte, 0, size)
         b.seqMutex.Lock()
 	seq := b.seq[seqid]
@@ -223,7 +222,8 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	if data != nil {
 		value = append(value[:6], data...)
 	}
-	fmt.Printf("write = %02x\n", value[:size])
+	//--- debug ---
+	// fmt.Printf("char = %s, write = %02x\n", blec.uuid, value[:size])
 	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value[:size], true); err != nil {
 		return err
 	}
@@ -362,16 +362,20 @@ func (b *Adaptor) onPeripheralDiscovered(p gatt.Peripheral, a *gatt.Advertisemen
 		return
 	}
 
-	// check device name
-	if !strings.HasPrefix(p.Name(), "Swat_") {
+	// manufacturer
+        ms := fmt.Sprintf("%x", a.ManufacturerData)
+        fmt.Printf("manufacturer = %s\n", ms)
+
+	// name
+	fmt.Printf("name = %s\n", p.Name())
+
+	// check device
+	if !strings.HasPrefix(p.Name(), "Swat_") && !strings.HasPrefix(p.Name(), "Maclan_") && ms != "4300cf1907090100" {
+		// not match device
 		return
 	}
 
-        ms := fmt.Sprintf("%x", a.ManufacturerData)
-        fmt.Printf("Manufacturer = %s\n", ms)
-	if ms != "4300cf1907090100" {
-		return
-	}
+	fmt.Printf("device match\n")
 
 	// Stop scanning once we've got the peripheral we're looking for.
 	p.Device().StopScanning()
@@ -401,6 +405,56 @@ func (b *Adaptor) setMTU(mtu uint16) error {
 		return err
 	}
 	return nil
+}
+
+func (b *Adaptor) notificationBase(c *gatt.Characteristic, b []byte, err error, nores bool, ressrvid string, rescharid string, resseqid uint16){
+	if err != nil {
+		fmt.Printf("notification errror (%v)\n", err)
+		return
+	}
+	if len(b) < 6 {
+		fmt.Printf("invalid notification\n")
+		fmt.Printf("%02x\n", b)
+		return
+	}
+	var rcmdid uint16
+	reqtype = b[0]
+	reqseq = b[1]
+	reqprjid = b[2]
+	reqclsid = b[3]
+	binary.Read(b[4:6], binary.LittleEndian, &reqcmdid)
+	fmt.Printf("type = %02x, seq = %02x, prjid = %02x, class id = %02x, cmdid = %02x\n", reqtype, reqseq, reqprjid, reqclsid, reqcmdid)
+	fmt.Printf("%02x\n", b)
+	// case
+	// XXXXXXXX
+
+	if nores {
+		return
+	}
+	// response
+	var ok bool
+	var bles *BLEService
+	var blec *BLECharacteristic
+	bles, ok = b.services[ressrvid]
+	if !ok {
+		fmt.Println("not found service")
+	}
+	blec, ok = bles.characteristics[rescharid]
+	if !ok {
+		fmt.Println("not found characteristic")
+	}
+	value := make([]byte, 0, 3)
+	b.seqMutex.Lock()
+	resseq := b.seq[resseqid]
+	b.seq[resseqid] += 1
+	b.seqMutex.Unlock()
+	value = append(value, 0x01, resseq, reqseq)
+	//--- debug ---
+	// fmt.Printf("char = %s, write = %02x\n", blec.uuid, value[:3])
+	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value[:3], true); err != nil {
+		fmt.Printf("notification response failure\n", err)
+		return
+	}
 }
 
 func (b *Adaptor) discoveryService() error {
@@ -435,41 +489,39 @@ func (b *Adaptor) discoveryService() error {
 	// add service
 	if bles, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
-			// notify (request with response on arnetwork)
-			fmt.Println("set notify REQ fb0f")
+			// notify (request with no response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
-				fmt.Println("-REQ fb0f-")
-				fmt.Println(b)
+				fmt.Println("-Notification REQ fb0f-")
+				b.notificationBase(c, b, err, true, nil, nil, 0)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
-			// notify (request with no response on arnetwork)
-			fmt.Println("set notify REQ fb0e")
+			// notify (request with need response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
-				fmt.Println("-REQ fb0e-")
-				fmt.Println(b)
+				fmt.Println("-Notification REQ fb0e-")
+				b.notificationBase(c, b, err, false, "9a66fa000800919111e4012d1540cb8e", "9a66fa1e0800919111e4012d1540cb8e", 0xfa1e)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
 			// notify (response on arnetwork)
-			fmt.Println("set notify RES fb1b")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
-				fmt.Println("-RES fb1b-")
-				fmt.Println(b)
+				fmt.Println("Notification -RES fb1b-")
+				fmt.Printf("%02x\n", b)
+				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
 			// notify (low latency response on arnetwork)
-			fmt.Println("set notify RES fb1c")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
-				fmt.Println("-RES fb1c-")
-				fmt.Println(b)
+				fmt.Println("-Notification RES fb1c-")
+				fmt.Printf("%02x\n", b)
+				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
 			}
@@ -478,30 +530,27 @@ func (b *Adaptor) discoveryService() error {
 	if bles, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
 			// ????
-			fmt.Println("set notify ??? fd22")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd22-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
-			fmt.Println("set notify DTP DATA fd23")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP DATA fd23-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
 			// notify (ftp control)
-			fmt.Println("set notify DTP DATA fd24")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP CNTRL fd24-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
@@ -510,30 +559,27 @@ func (b *Adaptor) discoveryService() error {
 	if bles, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
 			// ????
-			fmt.Println("set notify ??? fd52")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd52-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
 			// ????
-			fmt.Println("set notify ??? fd53")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd53-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
 			// ????
-			fmt.Println("set notify ??? fd54")
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd54-")
-				fmt.Println(b)
+				fmt.Printf("%02x\n", b)
 			}); err != nil {
 				fmt.Println(err)
 			}
