@@ -136,6 +136,73 @@ func (b *Adaptor) Connect() (errs []error) {
 	return nil
 }
 
+func (b *Adaptor) TakeOff() error {
+	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
+	value := make([]byte, 0, 16)
+	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x01, 0x00 /*cmdid 2byte*/)
+	err := b.peripheral.WriteCharacteristic(c, value[:6], false)
+	b.seq[0xfa0b] += 1
+	if err {
+		return err
+	}
+	return nil
+}
+
+func (b *Adaptor) Landing() error {
+	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
+	value := make([]byte, 0, 16)
+	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x03, 0x00 /*cmdid 2byte*/)
+	err := b.peripheral.WriteCharacteristic(c, value[:6], false)
+	b.seq[0xfa0b] += 1
+	if err {
+		return err
+	}
+	return nil
+}
+
+func (b *Adaptor) Flip(uint32 v) error {
+	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
+	value := make([]byte, 0, 16)
+	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x04 /*clsid*/, 0x00, 0x00 /*cmdid 2byte*/)
+	binary.LittleEndian.PutUint16(value[6:10], v)
+	err := b.peripheral.WriteCharacteristic(c, value[:10], false)
+	b.seq[0xfa0b] += 1
+	if err {
+		return err
+	}
+	return nil
+}
+
+/// XXXXXXXXXXXXXXXXXXXXXXX
+func (client *Client) SetMaxAltitude(altitude float) error {
+        if altitude < 2.6 || altitude > 10.0 {
+                return errors.New("altitude is out of range")
+        }
+        client.adaptor.SetMaxAltitude(altitude)
+}
+
+func (client *Client) SetMaxTilt(tilt float) error {
+        if tilt < 5.0 || tilt > 25.0 {
+                return Errors.New("tilt is out of range")
+        }
+        client.adaptor.SetMaxTilt(tilt)
+}
+
+func (client *Client) SetMaxVirticalSpeed(virticalSpeed float) error {
+        if virticalSpeed < 0.5 || virticalSpeed > 2.0 {
+                return Errors.New("virticalSpeed is out of range")
+        }
+        client.adaptor.SetMaxVirticalSpeed(virticalSpeed)
+}
+
+func (client *Client) SetMaxRotationSpeed(rotationSpeed float) error {
+        if rotationSpeed < 0.0 || rotationSpeed > 360 {
+                return Errors.New("rotationSpeed is out of range")
+        }
+        client.adaptor.SetMaxRotationSpeed(rotationSpeed)
+}
+/// XXXXXXXXXXXXXXXXXXXX
+
 func (b *Adaptor) AddDrive(int tickCnt, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
 	for i := 0; i < tickCnt; i++ {
 		dp := &DriveParam {
@@ -210,7 +277,8 @@ func (b *Adaptor) driveLoop() {
 				append(value, 0x02 /*type*/, b.seq[0xfa0a] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x02, 0x00 /*cmdid 2byte*/)
 				append(value, dp.flag, dp.roll, dp.pitch, dp.yaw, dp.gaz)
 				binary.LittleEndian.PutUint16(value[11:15], millisec)
-				err := b.peripheral.WriteCharacteristic(c, value, false)
+				err := b.peripheral.WriteCharacteristic(c, value[:15], false)
+				b.seq[0xfa0a] += 1
 				if err {
 					fmt.Println(err)
 				}
@@ -268,7 +336,7 @@ func (b *Adaptor) onStateChanged(d gatt.Device, s gatt.State) {
 	switch s {
 	case gatt.StatePoweredOn:
 		// set service
-		d.AddService(service.NewGattGapService()) 
+		d.AddService(service.NewGattGapService())
 		// start scan
 		fmt.Println("scanning...")
 		d.Scan([]gatt.UUID{}, false)

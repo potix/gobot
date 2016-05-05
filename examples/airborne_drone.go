@@ -15,8 +15,15 @@ func main() {
 
 	work := func() {
 		gobot.On(drone.Event("flying"), func(data interface{}) {
-			gobot.After(3*time.Second, func() {
-				drone.Land()
+			gobot.After(2*time.Second, func() {
+				cmd = drone.NewCommander()
+				cmd.Up(50).Right(50).Do(time.Duration(500 * time.Millisecond))
+				time.Sleep(time.Duration(1 * time.Second)
+				cmd.Left(100).Do(time.Duration(500 * time.Millisecond))
+				time.Sleep(time.Duration(1 * time.Second)
+				cmd.Down(50).Right(50).Do(time.Duration(500 * time.Millisecond))
+				time.Sleep(time.Duration(1 * time.Second)
+				drone.Landing()
 			})
 		})
 		drone.TakeOff()

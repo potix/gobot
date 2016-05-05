@@ -49,63 +49,83 @@ func (a *AirborneDroneDriver) Halt() (errs []error) {
 }
 
 // TakeOff makes the drone start flying, and publishes `flying` event
-func (a *AirborneDroneDriver) TakeOff() {
+func (a *AirborneDroneDriver) TakeOff(){
 	gobot.Publish(a.Event("flying"), a.adaptor().drone.Takeoff())
 }
 
 // Land causes the drone to land
-func (a *AirborneDroneDriver) Land() {
-	a.adaptor().drone.Land()
+func (a *AirborneDroneDriver) Landing() error {
+	return a.adaptor().drone.Landing()
 }
 
-// Up makes the drone gain altitude.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Up(speed float64) {
-	a.adaptor().drone.Up(speed)
+// FrontFlip causes the drone to front flip
+func (a *AirborneDroneDriver) FrontFlip() error {
+	return a.adaptor().drone.FrontFlip()
 }
 
-// Down makes the drone reduce altitude.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Down(speed float64) {
-	a.adaptor().drone.Down(speed)
+// BackFlip causes the drone to back flip
+func (a *AirborneDroneDriver) BackFlip() error {
+	return a.adaptor().drone.BackFlip()
 }
 
-// Left causes the drone to bank to the left, controls the roll, which is
-// a horizontal movement using the camera as a reference point.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Left(speed float64) {
-	a.adaptor().drone.Left(speed)
+// RightFlip causes the drone to right flip
+func (a *AirborneDroneDriver) RightFlip() error {
+	return a.adaptor().drone.RightFlip()
 }
 
-// Right causes the drone to bank to the right, controls the roll, which is
-// a horizontal movement using the camera as a reference point.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Right(speed float64) {
-	a.adaptor().drone.Right(speed)
+// LeftFlip causes the drone to left flip
+func (a *AirborneDroneDriver) LeftFlip() error {
+	return a.adaptor().drone.RightFlip()
 }
 
-// Forward causes the drone go forward, controls the pitch.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Forward(speed float64) {
-	a.adaptor().drone.Forward(speed)
+// SetMaxAltitude causes the drone to set max altitude (2.6 - 10.0)
+func (a *AirborneDroneDriver) SetMaxAltitude(altitude float) error {
+	return a.adaptor().drone.SetMaxAltitude(altitude)
 }
 
-// Backward causes the drone go backward, controls the pitch.
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Backward(speed float64) {
-	a.adaptor().drone.Backward(speed)
+// SetMaxTilt causes the drone to set max tilt (5 - 25.0
+func (a *AirborneDroneDriver) SetMaxTilt(tilt float) error {
+	return a.adaptor().drone.SetMaxTilt(tilt)
 }
 
-// Clockwise causes the drone to spin in clockwise direction
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) Clockwise(speed float64) {
-	a.adaptor().drone.Clockwise(speed)
+// SetMaxVirticalSpeed causes the drone to set max virtical speed (0.5 - 2.0)
+func (a *AirborneDroneDriver) SetMaxVirticalSpeed(virticalSpeed float) error {
+	return a.adaptor().drone.SetMaxVirticalSpeed(virticalSpeed)
 }
 
-// CounterClockwise the drone to spin in counter clockwise direction
-// speed can be a value from `0.0` to `1.0`.
-func (a *AirborneDroneDriver) CounterClockwise(speed float64) {
-	a.adaptor().drone.Counterclockwise(speed)
+// SetMaxRotationSpeed causes the drone to set max rotation speed (0 - 360)
+func (a *AirborneDroneDriver) SetMaxRotationSpeed(rotationSpeed float) error {
+	return a.adaptor().drone.SetMaxRotationSpeed(rotationSpeed)
+}
+
+// SetContinuousMode causes the drone to set continuous mode
+func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
+	return a.adaptor().drone.SetContinuousMode(onOff)
+}
+
+// Roll causes the drone to roll  (left -100 - right 100)
+func (a *AirborneDroneDriver) Roll(duration time.Duration, speedFactor int8) error {
+	return a.adaptor().drone.Roll(duration, speedFactor)
+}
+
+// Pitch causes the drone to pitch  (backward -100 - forward 100)
+func (a *AirborneDroneDriver) Pitch(duration time.Duration, speedFactor int8) error {
+	return a.adaptor().drone.Pitch(duration, speedFactor)
+}
+
+// Yaw causes the drone to yaw  (turn left -100 - turn right 100)
+func (a *AirborneDroneDriver) Yaw(duration time.Duration, speedFactor int8) error {
+	return a.adaptor().drone.Yaw(duration, speedFactor)
+}
+
+// Gaz causes the drone to gaz  (down -100 - up 100)
+func (a *AirborneDroneDriver) Gaz(duration time.Duration, speedFactor int8) error {
+	return a.adaptor().drone.Gaz(duration, speedFactor)
+}
+
+// NewCommander causes the drone to create commander
+func (a *AirborneDroneDriver) NewCommander() error {
+	return a.adaptor().drone.NewCommander()
 }
 
 // Hover makes the drone to hover in place.

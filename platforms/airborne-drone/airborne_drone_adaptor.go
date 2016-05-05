@@ -10,16 +10,22 @@ var _ gobot.Adaptor = (*AirborneDroneAdaptor)(nil)
 // drone defines expected drone behaviour
 type drone interface {
 	Takeoff() bool
-	Land()
-	Up(n float64)
-	Down(n float64)
-	Left(n float64)
-	Right(n float64)
-	Forward(n float64)
-	Backward(n float64)
-	Clockwise(n float64)
-	Counterclockwise(n float64)
+	Landing() error
+	FrontFlip() error
+	BackFlip() error
+	RightFlip() error
+	LeftFlip() error
+	SetMaxAltitude(altitude float) error
+	SetMaxTilt(tilt float) error
+	SetMaxVirticalSpeed(virticalSpeed float) error
+	SetMaxRotationSpeed(rotationSpeed float) error
+	SetContinuousMode(onOff bool)
+	Roll(duration time.Duration, speedFactor int8) error
+	Pitch(duration time.Duration, speedFactor int8) error
+	Yaw(duration time.Duration, speedFactor int8) error
+	Gaz(duration time.Duration, speedFactor int8) error
 	Hover()
+	NewCommander()
 }
 
 // AirborneDroneAdaptor is gobot.Adaptor representation for the AirborneDrone
