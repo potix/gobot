@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log"
 	"strings"
+        "time"
 
 	"github.com/potix/gobot"
 	"github.com/potix/gobot/platforms/airborne-drone/client/service"
 	"github.com/potix/gatt"
 )
+
+// drive tick times (millisecond)
+const DriveTick = 25
 
 // TODO: handle other OS defaults besides Linux
 var DefaultClientOptions = []gatt.Option{
@@ -17,6 +21,15 @@ var DefaultClientOptions = []gatt.Option{
 }
 
 var _ gobot.Adaptor = (*Adaptor)(nil)
+
+type DriveParam struct {
+	pcmd  uint8
+	flag  uint8
+	roll  int8
+	pitch int8
+	yaw   int8
+	gaz   int8
+}
 
 // Represents a Connection to a BLE Peripheral
 type Adaptor struct {
@@ -28,17 +41,35 @@ type Adaptor struct {
 	services	map[string]*BLEService
 	connected       bool
 	peripheralReady	chan error
+	seq		map[uint16]uint8
+	pcmdLoopEnd	chan bool
+	driveParamMutex  *sync.Mutex
+	driveParam      []interface{}
+	continuousMode  bool
+
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
 func NewAdaptor(name string, uuid string) *Adaptor {
-	return &Adaptor{
+	a := &Adaptor{
 		name:      name,
 		uuid:      uuid,
 		connected: false,
 		peripheralReady: make(chan error),
 		services: make(map[string]*BLEService),
+		seq: make(map[uint16]uint8),
+		driveLoopEnd: make(chan bool),
+		driveParamMutex: New(*sync.Mutex),
+		driveParam: make([]interface{}),
+		continuousMode: false,
 	}
+	a.seq[0xfa0a] = 0
+	a.seq[0xfa0b] = 0
+	a.seq[0xfa0c] = 0
+	a.seq[0xfa1e] = 0
+	a.seq[0xfd23] = 0
+	a.seq[0xfd24] = 0
+	return a
 }
 
 func (b *Adaptor) Name() string                { return b.name }
@@ -71,13 +102,13 @@ func (b *Adaptor) Connect() (errs []error) {
 	device.Init(b.onStateChanged)
 
 	// Peripheral ready
-	if err = <- b.peripheralReady; err != nil {
+	if err = <-b.peripheralReady; err != nil {
 		log.Fatalf("Failed to open BLE device, err: %s\n", err)
 		errs[0] = err
 		return errs
 	}
 	close(b.peripheralReady)
-	
+
 	// connected
 	fmt.Println("connected")
 	b.connected = true
@@ -100,7 +131,95 @@ func (b *Adaptor) Connect() (errs []error) {
 		return errs
 	}
 
+	go b.driveLoop()
+
 	return nil
+}
+
+func (b *Adaptor) AddDrive(int tickCnt, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
+	for i := 0; i < tickCnt; i++ {
+		dp := &DriveParam {
+			pcmd = 1,
+			flag = flag,
+			roll = roll,
+			pitch = pitch,
+			yaw = yaw,
+			gaz = gaz,
+		}
+		b.appendDriveParam(dp)
+	}
+}
+
+func (b *Adaptor) SetContinuousMode(continuousMode bool) {
+	b.driveParamMutex.Lock()
+	defer b.driveParamMutex.Unlock()
+	b.continuousMode = continuousMode
+}
+
+func (b *Adaptor) takeDriveParam(lastDP *DriveParam) (*DriveParam, bool) {
+	b.driveParamMutex.Lock()
+	defer b.driveParamMutex.Unlock()
+	if l = len(b.driveParam); l > 0 {
+		// return new drive param
+		b.driveParam = b.driveParam[1:len(b.driveParam)]
+		return b.driveParam[0]
+	} else {
+		if b.continuousMode {
+			// last param retry
+			return lastDP
+		} else {
+			// initialize (hover)
+			return &DriveParam {
+				pcmd = 1,
+				flag = 0,
+				roll = 0,
+				pitch = 0,
+				yaw = 0,
+				gaz = 0,
+			}
+		}
+	}
+}
+
+func (b *Adaptor) appendDriveParam(driveParam *DriveParam) {
+	b.driveParamMutex.Lock()
+	defer b.driveParamMutex.Unlock()
+	b.driveParam = append(b.driveParam, driveParam)
+}
+
+func (b *Adaptor) driveLoop() {
+	dp := &DriveParam {
+		pcmd = 1,
+		flag = 0,
+		roll = 0,
+		pitch = 0,
+		yaw = 0,
+		gaz = 0,
+	}
+	now := time.Now()
+	ticker := time.NewTicker(DriveTick * time.Millisecond)
+	loop:
+	for {
+		select {
+		case t := <-ticker.C:
+			dp = b.takeDriveParam(dp)
+			if (dp.pcmd) {
+				millisec := uint32(t.Sub(now).Seconds() * 1000)
+				c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0a0800919111e4012d1540cb8e"]
+				value := make([]byte, 0, 32)
+				append(value, 0x02 /*type*/, b.seq[0xfa0a] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x02, 0x00 /*cmdid 2byte*/)
+				append(value, dp.flag, dp.roll, dp.pitch, dp.yaw, dp.gaz)
+				binary.LittleEndian.PutUint16(value[11:15], millisec)
+				err := b.peripheral.WriteCharacteristic(c, value, false)
+				if err {
+					fmt.Println(err)
+				}
+			}
+		case <-b.driveLoopEnd:
+			break loop
+		}
+	}
+	ticker.Stop()
 }
 
 // Reconnect attempts to reconnect to the BLE peripheral. If it has an active connection
@@ -115,6 +234,7 @@ func (b *Adaptor) Reconnect() (errs []error) {
 
 // Disconnect terminates the connection to the BLE peripheral. Returns true on successful disconnect.
 func (b *Adaptor) Disconnect() (errs []error) {
+	b.driveLoopEnd <- true
 	b.peripheral.Device().CancelConnection(b.peripheral)
 	return
 }
@@ -148,7 +268,7 @@ func (b *Adaptor) onStateChanged(d gatt.Device, s gatt.State) {
 	switch s {
 	case gatt.StatePoweredOn:
 		// set service
-		d.AddService(service.NewGattService()) 
+		d.AddService(service.NewGattGapService()) 
 		// start scan
 		fmt.Println("scanning...")
 		d.Scan([]gatt.UUID{}, false)
@@ -167,6 +287,12 @@ func (b *Adaptor) onPeripheralDiscovered(p gatt.Peripheral, a *gatt.Advertisemen
 
 	// check device name
 	if !strings.HasPrefix(p.Name(), "Swat_") {
+		return
+	}
+
+        ms := fmt.Sprintf("%x", a.ManufacturerData)
+        fmt.Printf("Manufacturer = %s\n", ms)
+	if ms != "4300cf1907090100" {
 		return
 	}
 
@@ -221,21 +347,100 @@ func (b *Adaptor) discoveryService() error {
 			b.services[s.UUID().String()].characteristics[c.UUID().String()] = c
 		}
 	}
+
+	// add service
+	if s, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
+		if c, ok := s.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
+			// notify (request with response on arnetwork)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-REQ fb0f-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
+			// notify (request with no response on arnetwork)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-REQ fb0e-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
+			// notify (response on arnetwork)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-RES fb1b-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
+			// notify (low latency response on arnetwork)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-RES fb1c-")
+				fmt.Println(b)
+			})
+		}
+	}
+	if s, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
+		if c, ok := s.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
+			// ????
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-??? fd22-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
+			// notify (ftp data transfer)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-FTP DATA fd23-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
+			// notify (ftp control)
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-FTP CNTRL fd24-")
+				fmt.Println(b)
+			})
+		}
+	}
+	if s, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
+		if c, ok := s.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
+			// ????
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-??? fd52-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
+			// ????
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-??? fd53-")
+				fmt.Println(b)
+			})
+		}
+		if c, ok := s.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
+			// ????
+			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+				fmt.Println("-??? fd54-")
+				fmt.Println(b)
+			})
+		}
+	}
+
 	return nil
 }
 
 // Represents a BLE Peripheral's Service
 type BLEService struct {
-	uuid            	string
-	service        		*gatt.Service
-	characteristics 	map[string]*gatt.Characteristic
+	uuid            string
+	service         *gatt.Service
+	characteristics map[string]*gatt.Characteristic
 }
 
 // NewAdaptor returns a new BLEService given a uuid
 func NewBLEService(sUuid string, service *gatt.Service) *BLEService {
 	return &BLEService{
-		uuid:      sUuid,
-		service: 	 service,
+		uuid:            sUuid,
+		service:         service,
 		characteristics: make(map[string]*gatt.Characteristic),
 	}
 }

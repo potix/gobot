@@ -48,7 +48,7 @@ func (client *Client) Connect() error  {
 	// BLE connect
 	if errs := client.adaptor.Connect(); errs != nil {
 		for err := range errs {
-			fmt.Println(err)		
+			fmt.Println(err)
 		}
 		return errors.New("cloud not connect")
 	}
@@ -93,36 +93,114 @@ func (client *Client) Connect() error  {
 }
 
 
-// XXXXXXXXXXXXXXXX check follow functions
 func (client *Client) Takeoff() bool {
+	client.adaptor.TakeOff()
 	return true
 }
 
-func (client *Client) Land() {
+func (client *Client) Landing() {
+	client.adaptor.Landing()
 }
 
-func (client *Client) Apply(state State) {
+func (client *Client) FrontFlip() {
+	client.adaptor.Flip(0)
 }
 
-func (client *Client) ApplyFor(duration time.Duration, state State) {
+func (client *Client) BackFlip() {
+	client.adaptor.Flip(1)
 }
 
-func (client *Client) Vertical(duration time.Duration, speed float64) {
+func (client *Client) RightFlip() {
+	client.adaptor.Flip(2)
 }
 
-func (client *Client) Roll(duration time.Duration, speed float64) {
+func (client *Client) LeftFlip() {
+	client.adaptor.Flip(3)
 }
 
-func (client *Client) Pitch(duration time.Duration, speed float64) {
+// XXXX check follow functions
+//func (client *Client) Apply(state State) {
+//}
+
+// XXXX check follow functions
+//func (client *Client) ApplyFor(duration time.Duration, state State) {
+//}
+
+// XXXX check follow functions
+//func (client *Client) Vertical(duration time.Duration, speed float64) {
+//}
+
+func (client *Client) SetAltitude(altitude float) error {
+	if altitude < 2.6 || altitude > 10.0 {
+		return errors.New("altitude is out of range")
+	}
+	client.adaptor.SetAltitude(altitude)
 }
 
-func (client *Client) Yaw(duration time.Duration, speed float64) {
+func (client *Client) SetTilt(tilt float) error {
+	if tilt < 5.0 || tilt > 25.0 {
+		return Errors.New("tilt is out of range")
+	}
+	client.adaptor.SetTilt(tilt)
 }
 
-func (client *Client) Up(speed float64) {
+func (client *Client) SetVirticalSpeed(virticalSpeed float) error {
+	if virticalSpeed < 0.5 || virticalSpeed > 2.0 {
+		return Errors.New("virticalSpeed is out of range")
+	}
+	client.adaptor.SetVirticalSpeed(virticalSpeed)
 }
 
-func (client *Client) Down(speed float64) {
+func (client *Client) SetRotationSpeed(rotationSpeed float) error {
+	if rotationSpeed < 0.0 || rotationSpeed > 360 {
+		return Errors.New("rotationSpeed is out of range")
+	}
+	client.adaptor.SetRotationSpeed(rotationSpeed)
+}
+
+func (client *Client) SetContinuousMode(onOff uint8) {
+	client.adaptor.SetContinuousMode(onOff)
+}
+
+// roll, pitch, yaw, gaz
+func (client *Client) Roll(duration time.Duration, speedFactor int8) {
+	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	client.adaptor.AddDrive(tc, 1, speedFactor, 0, 0, 0)
+}
+
+func (client *Client) Pitch(duration time.Duration, speedFactor int8) {
+	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	client.adaptor.AddDrive(tc, 1, 0, speedFactor, 0, 0)
+}
+
+func (client *Client) Yaw(duration time.Duration, speedFactor int8) {
+	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	client.adaptor.AddDrive(tc, 1, 0, 0, speedFactor, 0)
+}
+
+func (client *Client) Gaz(duration time.Duration, speedFactor int8) {
+	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	client.adaptor.AddDrive(tc, 1, 0, 0, 0 speedFactor)
+}
+
+
+
+
+
+
+// command mode
+func (client *Client) NewCommand(duration time.Duration, speed float64) {
+}
+func (client *Client) Up(duration time.Duration, speed float64, ) {
+}
+
+func (client *Client) Down(duration time.Duration, speed float64) {
+}
+
+func (client *Client) Forward(duration time.Duration,speed float64) {
+}
+
+func (client *Client) Backward(speed float64) {
 }
 
 func (client *Client) Right(speed float64) {
@@ -131,18 +209,23 @@ func (client *Client) Right(speed float64) {
 func (client *Client) Left(speed float64) {
 }
 
-func (client *Client) Clockwise(speed float64) {
+func (client *Client) TurnRight(speed float64) {
 }
 
-func (client *Client) Counterclockwise(speed float64) {
+func (client *Client) TurnLeft(speed float64) {
 }
 
-func (client *Client) Forward(speed float64) {
-}
 
-func (client *Client) Backward(speed float64) {
-}
+
+
+
+//func (client *Client) Clockwise(speed float64) {
+//}
+
+//func (client *Client) Counterclockwise(speed float64) {
+//}
 
 func (client *Client) Hover() {
+	client.adaptor.AddDrive(1 /*tick count*/, 0 /*flag*/, 0 /*roll*/, 0 /*pitch*/, 0 /*yaw*/, 0 /*gaz*/)
 }
 

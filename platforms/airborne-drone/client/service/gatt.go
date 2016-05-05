@@ -10,7 +10,7 @@ var (
 	attrDeviceName = gatt.UUID16(0x2A00)
 )
 
-func NewGattService() *gatt.Service {
+func NewGattGapService() *gatt.Service {
 	s := gatt.NewService(attrGATTUUID)
 	s.AddCharacteristic(attrDeviceName).HandleReadFunc(
 		func(rsp gatt.ResponseWriter, req *gatt.ReadRequest) {
@@ -23,3 +23,4 @@ func NewGattService() *gatt.Service {
 		})
 	return s
 }
+
