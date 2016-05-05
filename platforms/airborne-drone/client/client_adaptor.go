@@ -7,6 +7,7 @@ import (
         "time"
         "sync"
         "math"
+        "errors"
 	"encoding/binary"
 
 	"github.com/potix/gobot"
@@ -198,7 +199,16 @@ func (b *Adaptor) SetContinuousMode(continuousMode bool) {
 }
 
 func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte, size int) error {
-	c := b.services[srvid].characteristics[charid]
+	var ok bool;
+	var s *BLEService;
+	var c *gatt.Characteristic;
+	if s, ok = b.services[srvid]; !ok {
+		return errors.New("not found service")
+	}
+	if c, ok = s.characteristics[charid]; !ok {
+		return errors.New("not found characteristic")
+	}
+	fmt.Printf("char = %s\n", c.UUID().String())
 	value := make([]byte, 0, size)
 	value = append(value, reqtype, b.seq[seqid], prjid, clsid)
 	binary.LittleEndian.PutUint16(value[4:6], cmdid)
@@ -206,7 +216,7 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 		value = append(value[:6], data...)
 	}
 	fmt.Printf("write = %02x\n", value[:size])
-	err := b.peripheral.WriteCharacteristic(c, value[:size], false)
+	err := b.peripheral.WriteCharacteristic(c, value[:size], true)
 	b.seq[seqid] += 1
 	if err != nil {
 		return err
@@ -413,6 +423,7 @@ func (b *Adaptor) discoveryService() error {
 	if s, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
 		if c, ok := s.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
 			// notify (request with response on arnetwork)
+			fmt.Println("set notify REQ fb0f")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-REQ fb0f-")
 				fmt.Println(b)
@@ -420,6 +431,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
 			// notify (request with no response on arnetwork)
+			fmt.Println("set notify REQ fb0e")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-REQ fb0e-")
 				fmt.Println(b)
@@ -427,6 +439,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
 			// notify (response on arnetwork)
+			fmt.Println("set notify RES fb1b")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-RES fb1b-")
 				fmt.Println(b)
@@ -434,6 +447,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
 			// notify (low latency response on arnetwork)
+			fmt.Println("set notify RES fb1c")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-RES fb1c-")
 				fmt.Println(b)
@@ -443,6 +457,7 @@ func (b *Adaptor) discoveryService() error {
 	if s, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
 		if c, ok := s.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
 			// ????
+			fmt.Println("set notify ??? fd22")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd22-")
 				fmt.Println(b)
@@ -450,6 +465,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
+			fmt.Println("set notify DTP DATA fd23")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP DATA fd23-")
 				fmt.Println(b)
@@ -457,6 +473,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
 			// notify (ftp control)
+			fmt.Println("set notify DTP DATA fd24")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP CNTRL fd24-")
 				fmt.Println(b)
@@ -466,6 +483,7 @@ func (b *Adaptor) discoveryService() error {
 	if s, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
 		if c, ok := s.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
 			// ????
+			fmt.Println("set notify ??? fd52")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd52-")
 				fmt.Println(b)
@@ -473,6 +491,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
 			// ????
+			fmt.Println("set notify ??? fd53")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd53-")
 				fmt.Println(b)
@@ -480,6 +499,7 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if c, ok := s.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
 			// ????
+			fmt.Println("set notify ??? fd54")
 			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd54-")
 				fmt.Println(b)
