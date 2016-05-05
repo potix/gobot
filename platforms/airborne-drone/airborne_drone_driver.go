@@ -1,7 +1,10 @@
 package airbornedrone
 
 import (
+	"time"
+
 	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/airborne-drone/client"
 )
 
 var _ gobot.Driver = (*AirborneDroneDriver)(nil)
@@ -79,28 +82,28 @@ func (a *AirborneDroneDriver) LeftFlip() error {
 }
 
 // SetMaxAltitude causes the drone to set max altitude (2.6 - 10.0)
-func (a *AirborneDroneDriver) SetMaxAltitude(altitude float) error {
+func (a *AirborneDroneDriver) SetMaxAltitude(altitude float32) error {
 	return a.adaptor().drone.SetMaxAltitude(altitude)
 }
 
 // SetMaxTilt causes the drone to set max tilt (5 - 25.0
-func (a *AirborneDroneDriver) SetMaxTilt(tilt float) error {
+func (a *AirborneDroneDriver) SetMaxTilt(tilt float32) error {
 	return a.adaptor().drone.SetMaxTilt(tilt)
 }
 
 // SetMaxVirticalSpeed causes the drone to set max virtical speed (0.5 - 2.0)
-func (a *AirborneDroneDriver) SetMaxVirticalSpeed(virticalSpeed float) error {
+func (a *AirborneDroneDriver) SetMaxVirticalSpeed(virticalSpeed float32) error {
 	return a.adaptor().drone.SetMaxVirticalSpeed(virticalSpeed)
 }
 
 // SetMaxRotationSpeed causes the drone to set max rotation speed (0 - 360)
-func (a *AirborneDroneDriver) SetMaxRotationSpeed(rotationSpeed float) error {
+func (a *AirborneDroneDriver) SetMaxRotationSpeed(rotationSpeed float32) error {
 	return a.adaptor().drone.SetMaxRotationSpeed(rotationSpeed)
 }
 
 // SetContinuousMode causes the drone to set continuous mode
 func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
-	return a.adaptor().drone.SetContinuousMode(onOff)
+	a.adaptor().drone.SetContinuousMode(onOff)
 }
 
 // Roll causes the drone to roll  (left -100 - right 100)
@@ -124,7 +127,7 @@ func (a *AirborneDroneDriver) Gaz(duration time.Duration, speedFactor int8) erro
 }
 
 // NewCommander causes the drone to create commander
-func (a *AirborneDroneDriver) NewCommander() error {
+func (a *AirborneDroneDriver) NewCommander() *client.Commander {
 	return a.adaptor().drone.NewCommander()
 }
 

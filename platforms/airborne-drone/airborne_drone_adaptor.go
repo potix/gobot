@@ -1,8 +1,10 @@
 package airbornedrone
 
 import (
-	"github.com/potix/gobot/platforms/airborne-drone/client"
+	"time"
+
 	"github.com/potix/gobot"
+	"github.com/potix/gobot/platforms/airborne-drone/client"
 )
 
 var _ gobot.Adaptor = (*AirborneDroneAdaptor)(nil)
@@ -15,17 +17,17 @@ type drone interface {
 	BackFlip() error
 	RightFlip() error
 	LeftFlip() error
-	SetMaxAltitude(altitude float) error
-	SetMaxTilt(tilt float) error
-	SetMaxVirticalSpeed(virticalSpeed float) error
-	SetMaxRotationSpeed(rotationSpeed float) error
+	SetMaxAltitude(altitude float32) error
+	SetMaxTilt(tilt float32) error
+	SetMaxVirticalSpeed(virticalSpeed float32) error
+	SetMaxRotationSpeed(rotationSpeed float32) error
 	SetContinuousMode(onOff bool)
 	Roll(duration time.Duration, speedFactor int8) error
 	Pitch(duration time.Duration, speedFactor int8) error
 	Yaw(duration time.Duration, speedFactor int8) error
 	Gaz(duration time.Duration, speedFactor int8) error
 	Hover()
-	NewCommander()
+	NewCommander() *client.Commander
 }
 
 // AirborneDroneAdaptor is gobot.Adaptor representation for the AirborneDrone

@@ -11,7 +11,7 @@ import (
 //	Fly       bool     // Set to false for landing.
 //	Emergency bool     // Used to disable / trigger emergency mode
 //	Config    []KeyVal // Config values to send
-}
+//}
 
 // XXXXXXXXXXXXXXX check
 //type KeyVal struct {
@@ -125,7 +125,7 @@ func (client *Client) LeftFlip() error {
 //func (client *Client) ApplyFor(duration time.Duration, state State) {
 //}
 
-func (client *Client) SetMaxAltitude(altitude float) error {
+func (client *Client) SetMaxAltitude(altitude float32) error {
 	if altitude < 2.6 || altitude > 10.0 {
 		return errors.New("altitude is out of range")
 	}
@@ -133,23 +133,23 @@ func (client *Client) SetMaxAltitude(altitude float) error {
 	return nil
 }
 
-func (client *Client) SetMaxTilt(tilt float) error {
+func (client *Client) SetMaxTilt(tilt float32) error {
 	if tilt < 5.0 || tilt > 25.0 {
-		return Errors.New("tilt is out of range")
+		return errors.New("tilt is out of range")
 	}
 	client.adaptor.SetMaxTilt(tilt)
 	return nil
 }
 
-func (client *Client) SetMaxVirticalSpeed(virticalSpeed float) error {
+func (client *Client) SetMaxVirticalSpeed(virticalSpeed float32) error {
 	if virticalSpeed < 0.5 || virticalSpeed > 2.0 {
-		return Errors.New("virticalSpeed is out of range")
+		return errors.New("virticalSpeed is out of range")
 	}
 	client.adaptor.SetMaxVirticalSpeed(virticalSpeed)
 	return nil
 }
 
-func (client *Client) SetMaxRotationSpeed(rotationSpeed float) error {
+func (client *Client) SetMaxRotationSpeed(rotationSpeed float32) error {
 	if rotationSpeed < 0.0 || rotationSpeed > 360 {
 		return errors.New("rotationSpeed is out of range")
 	}
@@ -166,7 +166,7 @@ func (client *Client) Roll(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
 		return errors.New("speedFactor is out of range")
 	}
-	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	client.adaptor.AddDrive(tc, 1, speedFactor, 0, 0, 0)
 	return nil
 }
@@ -175,7 +175,7 @@ func (client *Client) Pitch(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
 		return errors.New("speedFactor is out of range")
 	}
-	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	client.adaptor.AddDrive(tc, 1, 0, speedFactor, 0, 0)
 	return nil
 }
@@ -184,7 +184,7 @@ func (client *Client) Yaw(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
 		return errors.New("speedFactor is out of range")
 	}
-	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	client.adaptor.AddDrive(tc, 1, 0, 0, speedFactor, 0)
 	return nil
 }
@@ -193,8 +193,8 @@ func (client *Client) Gaz(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
 		return errors.New("speedFactor is out of range")
 	}
-	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
-	client.adaptor.AddDrive(tc, 1, 0, 0, 0 speedFactor)
+	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
+	client.adaptor.AddDrive(tc, 1, 0, 0, 0, speedFactor)
 	return nil
 }
 
@@ -214,49 +214,73 @@ type Commander struct {
 }
 
 func (client *Client) NewCommander() *Commander {
-	cmd := New(Commander)
-	cmd.driveParam = New(DriveParam)
+	cmd := new(Commander)
+	cmd.driveParam = new(DriveParam)
 	cmd.client = client
 	return cmd
 }
 
 func (cmd *Commander) Up(speedFactor uint8) *Commander {
-	cmd.driveParam.gaz += speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.gaz += int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) Down(speedFactor uint8) *Commander {
-	cmd.driveParam.gaz -= speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.gaz -= int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) Forward(speedFactor uint8) *Commander {
-	cmd.driveParam.pitch += speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.pitch += int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) Backward(speedFactor uint8) *Commander {
-	cmd.driveParam.pitch -= speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.pitch -= int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) Right(speedFactor uint8) *Commander {
-	cmd.driveParam.roll += speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.roll += int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) Left(speedFactor uint8) *Commander {
-	cmd.driveParam.roll -= speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.roll -= int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) TurnRight(speedFactor uint8) *Commander {
-	cmd.driveParam.yaw += speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.yaw += int8(speedFactor)
 	return cmd
 }
 
 func (cmd *Commander) TurnLeft(speedFactor uint8) *Commander {
-	cmd.driveParam.yaw -= speedFactor
+	if speedFactor > 100 {
+		speedFactor = 100
+	}
+	cmd.driveParam.yaw -= int8(speedFactor)
 	return cmd
 }
 
@@ -266,12 +290,12 @@ func (cmd *Commander) Stop() *Commander {
 	cmd.driveParam.pitch = 0
 	cmd.driveParam.yaw = 0
 	cmd.driveParam.gaz = 0
-	client.adaptor.AddDrive(1, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
+	cmd.client.adaptor.AddDrive(1, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
 	return cmd
 }
 
 func (cmd *Commander) Do(duration time.Duration) *Commander {
-	tc = int(duration/time.Duration(DriveTick * time.Millisecond))
+	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	if cmd.driveParam.roll < -100 {
 		cmd.driveParam.roll = -100
 	} else if cmd.driveParam.roll > 100{
@@ -293,7 +317,7 @@ func (cmd *Commander) Do(duration time.Duration) *Commander {
 		cmd.driveParam.gaz = 100
 	}
 	cmd.driveParam.flag = 1
-	client.adaptor.AddDrive(tc, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
+	cmd.client.adaptor.AddDrive(tc, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
 	return cmd
 }
 

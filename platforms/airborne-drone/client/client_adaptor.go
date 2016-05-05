@@ -5,6 +5,9 @@ import (
 	"log"
 	"strings"
         "time"
+        "sync"
+        "math"
+	"encoding/binary"
 
 	"github.com/potix/gobot"
 	"github.com/potix/gobot/platforms/airborne-drone/client/service"
@@ -23,7 +26,7 @@ var DefaultClientOptions = []gatt.Option{
 var _ gobot.Adaptor = (*Adaptor)(nil)
 
 type DriveParam struct {
-	pcmd  uint8
+	pcmd  bool
 	flag  uint8
 	roll  int8
 	pitch int8
@@ -42,9 +45,9 @@ type Adaptor struct {
 	connected       bool
 	peripheralReady	chan error
 	seq		map[uint16]uint8
-	pcmdLoopEnd	chan bool
+	driveLoopEnd	chan bool
 	driveParamMutex  *sync.Mutex
-	driveParam      []interface{}
+	driveParam      []*DriveParam
 	continuousMode  bool
 
 }
@@ -59,8 +62,8 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		services: make(map[string]*BLEService),
 		seq: make(map[uint16]uint8),
 		driveLoopEnd: make(chan bool),
-		driveParamMutex: New(*sync.Mutex),
-		driveParam: make([]interface{}),
+		driveParamMutex: new(sync.Mutex),
+		driveParam: make([]*DriveParam, 0, 0),
 		continuousMode: false,
 	}
 	a.seq[0xfa0a] = 0
@@ -137,81 +140,52 @@ func (b *Adaptor) Connect() (errs []error) {
 }
 
 func (b *Adaptor) TakeOff() error {
-	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
-	value := make([]byte, 0, 16)
-	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x01, 0x00 /*cmdid 2byte*/)
-	err := b.peripheral.WriteCharacteristic(c, value[:6], false)
-	b.seq[0xfa0b] += 1
-	if err {
-		return err
-	}
-	return nil
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x01, nil, 6)
 }
 
 func (b *Adaptor) Landing() error {
-	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
-	value := make([]byte, 0, 16)
-	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x03, 0x00 /*cmdid 2byte*/)
-	err := b.peripheral.WriteCharacteristic(c, value[:6], false)
-	b.seq[0xfa0b] += 1
-	if err {
-		return err
-	}
-	return nil
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x03, nil, 6)
 }
 
-func (b *Adaptor) Flip(uint32 v) error {
-	c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0b0800919111e4012d1540cb8e"]
-	value := make([]byte, 0, 16)
-	append(value, 0x04 /*type*/, b.seq[0xfa0b] /*seq*/, 0x02 /*prjid*/, 0x04 /*clsid*/, 0x00, 0x00 /*cmdid 2byte*/)
-	binary.LittleEndian.PutUint16(value[6:10], v)
-	err := b.peripheral.WriteCharacteristic(c, value[:10], false)
-	b.seq[0xfa0b] += 1
-	if err {
-		return err
-	}
-	return nil
+func (b *Adaptor) Flip(value uint32) error {
+	data := make([]byte, 0, 4)
+	binary.LittleEndian.PutUint32(data[0:4], value)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x04, 0x00, data, 10)
 }
 
-/// XXXXXXXXXXXXXXXXXXXXXXX
-func (client *Client) SetMaxAltitude(altitude float) error {
-        if altitude < 2.6 || altitude > 10.0 {
-                return errors.New("altitude is out of range")
-        }
-        client.adaptor.SetMaxAltitude(altitude)
+func (b *Adaptor) SetMaxAltitude(altitude float32) error {
+	data := make([]byte, 0, 4)
+	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(altitude))
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x00, data, 10)
 }
 
-func (client *Client) SetMaxTilt(tilt float) error {
-        if tilt < 5.0 || tilt > 25.0 {
-                return Errors.New("tilt is out of range")
-        }
-        client.adaptor.SetMaxTilt(tilt)
+func (b *Adaptor) SetMaxTilt(tilt float32) error {
+	data := make([]byte, 0, 4)
+	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(tilt))
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x01, data, 10)
 }
 
-func (client *Client) SetMaxVirticalSpeed(virticalSpeed float) error {
-        if virticalSpeed < 0.5 || virticalSpeed > 2.0 {
-                return Errors.New("virticalSpeed is out of range")
-        }
-        client.adaptor.SetMaxVirticalSpeed(virticalSpeed)
+func (b *Adaptor) SetMaxVirticalSpeed(virticalSpeed float32) error {
+	data := make([]byte, 0, 4)
+	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(virticalSpeed))
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x00, data, 10)
 }
 
-func (client *Client) SetMaxRotationSpeed(rotationSpeed float) error {
-        if rotationSpeed < 0.0 || rotationSpeed > 360 {
-                return Errors.New("rotationSpeed is out of range")
-        }
-        client.adaptor.SetMaxRotationSpeed(rotationSpeed)
+func (b *Adaptor) SetMaxRotationSpeed(rotationSpeed float32) error {
+	data := make([]byte, 0, 4)
+	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(rotationSpeed))
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x01, data, 10)
 }
-/// XXXXXXXXXXXXXXXXXXXX
 
-func (b *Adaptor) AddDrive(int tickCnt, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
+func (b *Adaptor) AddDrive(tickCnt int, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
 	for i := 0; i < tickCnt; i++ {
 		dp := &DriveParam {
-			pcmd = 1,
-			flag = flag,
-			roll = roll,
-			pitch = pitch,
-			yaw = yaw,
-			gaz = gaz,
+			pcmd: true,
+			flag: flag,
+			roll: roll,
+			pitch: pitch,
+			yaw: yaw,
+			gaz: gaz,
 		}
 		b.appendDriveParam(dp)
 	}
@@ -223,13 +197,31 @@ func (b *Adaptor) SetContinuousMode(continuousMode bool) {
 	b.continuousMode = continuousMode
 }
 
-func (b *Adaptor) takeDriveParam(lastDP *DriveParam) (*DriveParam, bool) {
+func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte, size int) error {
+	c := b.services[srvid].characteristics[charid]
+	value := make([]byte, 0, size)
+	value = append(value, reqtype, b.seq[seqid], prjid, clsid)
+	binary.LittleEndian.PutUint16(value[4:6], cmdid)
+	if data != nil {
+		value = append(value[:6], data...)
+	}
+	fmt.Printf("write = %02x\n", value[:size])
+	err := b.peripheral.WriteCharacteristic(c, value[:size], false)
+	b.seq[seqid] += 1
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Adaptor) takeDriveParam(lastDP *DriveParam) *DriveParam {
 	b.driveParamMutex.Lock()
 	defer b.driveParamMutex.Unlock()
-	if l = len(b.driveParam); l > 0 {
+	if l := len(b.driveParam); l > 0 {
 		// return new drive param
+		dp := b.driveParam[0]
 		b.driveParam = b.driveParam[1:len(b.driveParam)]
-		return b.driveParam[0]
+		return dp
 	} else {
 		if b.continuousMode {
 			// last param retry
@@ -237,12 +229,12 @@ func (b *Adaptor) takeDriveParam(lastDP *DriveParam) (*DriveParam, bool) {
 		} else {
 			// initialize (hover)
 			return &DriveParam {
-				pcmd = 1,
-				flag = 0,
-				roll = 0,
-				pitch = 0,
-				yaw = 0,
-				gaz = 0,
+				pcmd: true,
+				flag: 0,
+				roll: 0,
+				pitch: 0,
+				yaw: 0,
+				gaz: 0,
 			}
 		}
 	}
@@ -256,30 +248,31 @@ func (b *Adaptor) appendDriveParam(driveParam *DriveParam) {
 
 func (b *Adaptor) driveLoop() {
 	dp := &DriveParam {
-		pcmd = 1,
-		flag = 0,
-		roll = 0,
-		pitch = 0,
-		yaw = 0,
-		gaz = 0,
+		pcmd: true,
+		flag: 0,
+		roll: 0,
+		pitch: 0,
+		yaw: 0,
+		gaz: 0,
 	}
-	now := time.Now()
+	start := time.Now()
 	ticker := time.NewTicker(DriveTick * time.Millisecond)
 	loop:
 	for {
 		select {
 		case t := <-ticker.C:
 			dp = b.takeDriveParam(dp)
-			if (dp.pcmd) {
-				millisec := uint32(t.Sub(now).Seconds() * 1000)
-				c := b.services["9a66fa000800919111e4012d1540cb8e"].characteristics["9a66fa0a0800919111e4012d1540cb8e"]
-				value := make([]byte, 0, 32)
-				append(value, 0x02 /*type*/, b.seq[0xfa0a] /*seq*/, 0x02 /*prjid*/, 0x00 /*clsid*/, 0x02, 0x00 /*cmdid 2byte*/)
-				append(value, dp.flag, dp.roll, dp.pitch, dp.yaw, dp.gaz)
-				binary.LittleEndian.PutUint16(value[11:15], millisec)
-				err := b.peripheral.WriteCharacteristic(c, value[:15], false)
-				b.seq[0xfa0a] += 1
-				if err {
+			if dp.pcmd {
+				millisec := uint32(t.Sub(start).Seconds() * 1000)
+				data := make([]byte, 0, 9)
+				data = append(data, byte(dp.flag))
+				data = append(data, byte(dp.roll))
+				data = append(data, byte(dp.pitch))
+				data = append(data, byte(dp.yaw))
+				data = append(data, byte(dp.gaz))
+				binary.LittleEndian.PutUint32(data[5:9], millisec)
+				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x00, data[0:9], 15)
+				if err != nil {
 					fmt.Println(err)
 				}
 			}
