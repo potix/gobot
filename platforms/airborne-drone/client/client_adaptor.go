@@ -46,8 +46,9 @@ type Adaptor struct {
 	connected       bool
 	peripheralReady	chan error
 	seq		map[uint16]uint8
+	seqMutex        *sync.Mutex
 	driveLoopEnd	chan bool
-	driveParamMutex  *sync.Mutex
+	driveParamMutex *sync.Mutex
 	driveParam      []*DriveParam
 	continuousMode  bool
 
@@ -62,6 +63,7 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		peripheralReady: make(chan error),
 		services: make(map[string]*BLEService),
 		seq: make(map[uint16]uint8),
+		seqMutex: new(sync.Mutex),
 		driveLoopEnd: make(chan bool),
 		driveParamMutex: new(sync.Mutex),
 		driveParam: make([]*DriveParam, 0, 0),
@@ -199,26 +201,30 @@ func (b *Adaptor) SetContinuousMode(continuousMode bool) {
 }
 
 func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte, size int) error {
-	var ok bool;
-	var s *BLEService;
-	var c *gatt.Characteristic;
-	if s, ok = b.services[srvid]; !ok {
+	var ok bool
+	var bles *BLEService
+	var blec *BLECharacteristic
+	bles, ok = b.services[srvid]
+	if !ok {
 		return errors.New("not found service")
 	}
-	if c, ok = s.characteristics[charid]; !ok {
+	blec, ok = bles.characteristics[charid]
+	if !ok {
 		return errors.New("not found characteristic")
 	}
-	fmt.Printf("char = %s\n", c.UUID().String())
+	fmt.Printf("char = %s\n", blec.uuid)
 	value := make([]byte, 0, size)
-	value = append(value, reqtype, b.seq[seqid], prjid, clsid)
+        b.seqMutex.Lock()
+	seq := b.seq[seqid]
+	b.seq[seqid] += 1
+        b.seqMutex.Unlock()
+	value = append(value, reqtype, seq, prjid, clsid)
 	binary.LittleEndian.PutUint16(value[4:6], cmdid)
 	if data != nil {
 		value = append(value[:6], data...)
 	}
 	fmt.Printf("write = %02x\n", value[:size])
-	err := b.peripheral.WriteCharacteristic(c, value[:size], true)
-	b.seq[seqid] += 1
-	if err != nil {
+	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value[:size], true); err != nil {
 		return err
 	}
 	return nil
@@ -323,8 +329,8 @@ func (b *Adaptor) ReadCharacteristic(sUUID string, cUUID string) (data []byte, e
                 return
         }
 
-        characteristic := b.services[sUUID].characteristics[cUUID]
-        val, err := b.peripheral.ReadCharacteristic(characteristic)
+        blec := b.services[sUUID].characteristics[cUUID]
+        val, err := b.peripheral.ReadCharacteristic(blec.characteristic)
         if err != nil {
                 fmt.Printf("Failed to read characteristic, err: %s\n", err)
                 return  nil, err
@@ -404,106 +410,133 @@ func (b *Adaptor) discoveryService() error {
 		fmt.Printf("Failed to discover services, err: %s\n", err)
 		return err
 	}
-
 	for _, s := range ss {
 		b.services[s.UUID().String()] = NewBLEService(s.UUID().String(), s)
-
+		fmt.Println("discoveryService")
 		cs, err := b.peripheral.DiscoverCharacteristics(nil, s)
 		if err != nil {
 			fmt.Printf("Failed to discover characteristics, err: %s\n", err)
 			continue
 		}
-
 		for _, c := range cs {
-			b.services[s.UUID().String()].characteristics[c.UUID().String()] = c
+			b.services[s.UUID().String()].characteristics[c.UUID().String()] = NewBLECharacteristic(c.UUID().String(), c)
+			fmt.Println("discoveryDescripto")
+			ds, err := b.peripheral.DiscoverDescriptors(nil, c)
+			if err != nil {
+				fmt.Printf("Failed to discover discriptors, err: %s\n", err)
+				continue
+			}
+			for _, d := range ds {
+				b.services[s.UUID().String()].characteristics[c.UUID().String()].descriptors[d.UUID().String()] = NewBLEDescriptor(d.UUID().String(), d)
+			}
 		}
 	}
 
 	// add service
-	if s, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
-		if c, ok := s.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
+	if bles, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
 			// notify (request with response on arnetwork)
 			fmt.Println("set notify REQ fb0f")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-REQ fb0f-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
 			// notify (request with no response on arnetwork)
 			fmt.Println("set notify REQ fb0e")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-REQ fb0e-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
 			// notify (response on arnetwork)
 			fmt.Println("set notify RES fb1b")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-RES fb1b-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
 			// notify (low latency response on arnetwork)
 			fmt.Println("set notify RES fb1c")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-RES fb1c-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
-	if s, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
-		if c, ok := s.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
+	if bles, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
 			// ????
 			fmt.Println("set notify ??? fd22")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd22-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
 			fmt.Println("set notify DTP DATA fd23")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP DATA fd23-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
 			// notify (ftp control)
 			fmt.Println("set notify DTP DATA fd24")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-FTP CNTRL fd24-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
-	if s, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
-		if c, ok := s.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
+	if bles, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
 			// ????
 			fmt.Println("set notify ??? fd52")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd52-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
 			// ????
 			fmt.Println("set notify ??? fd53")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd53-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
-		if c, ok := s.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
+		if blec, ok := bles.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
 			// ????
 			fmt.Println("set notify ??? fd54")
-			b.peripheral.SetNotifyValue(c, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
 				fmt.Println("-??? fd54-")
 				fmt.Println(b)
-			})
+			}); err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 
@@ -514,14 +547,44 @@ func (b *Adaptor) discoveryService() error {
 type BLEService struct {
 	uuid            string
 	service         *gatt.Service
-	characteristics map[string]*gatt.Characteristic
+	characteristics map[string]*BLECharacteristic
+}
+
+// Represents a BLE Peripheral's Charactoristic
+type BLECharacteristic struct {
+	uuid            string
+	characteristic  *gatt.Characteristic
+	descriptors     map[string]*BLEDescriptor
+}
+
+// Represents a BLE Peripheral's Charactoristic
+type BLEDescriptor struct {
+	uuid            string
+	descriptor      *gatt.Descriptor
+}
+
+// NewBLEService returns a new BLEService given a uuid
+func NewBLEService(suuid string, service *gatt.Service) *BLEService {
+	return &BLEService{
+		uuid:            suuid,
+		service:         service,
+		characteristics: make(map[string]*BLECharacteristic),
+	}
+}
+
+// NewBLECharacteristic returns a new NewBLECharacteristic given a uuid
+func NewBLECharacteristic(cuuid string, characteristic *gatt.Characteristic) *BLECharacteristic {
+	return &BLECharacteristic{
+		uuid:            cuuid,
+		characteristic:  characteristic,
+		descriptors:     make(map[string]*BLEDescriptor),
+	}
 }
 
 // NewAdaptor returns a new BLEService given a uuid
-func NewBLEService(sUuid string, service *gatt.Service) *BLEService {
-	return &BLEService{
-		uuid:            sUuid,
-		service:         service,
-		characteristics: make(map[string]*gatt.Characteristic),
+func NewBLEDescriptor(duuid string, descriptor *gatt.Descriptor) *BLEDescriptor {
+	return &BLEDescriptor{
+		uuid:        duuid,
+		descriptor:  descriptor,
 	}
 }
