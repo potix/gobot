@@ -8,6 +8,7 @@ import (
         "sync"
         "math"
         "errors"
+        "bytes"
 	"encoding/binary"
 
 	"github.com/potix/gobot"
@@ -37,21 +38,24 @@ type DriveParam struct {
 
 // Represents a Connection to a BLE Peripheral
 type Adaptor struct {
-	name            string
-	uuid            string
-	device          gatt.Device
-	peripheral      gatt.Peripheral
-	state		gatt.State
-	services	map[string]*BLEService
-	connected       bool
-	peripheralReady	chan error
-	seq		map[uint16]uint8
-	seqMutex        *sync.Mutex
-	driveLoopEnd	chan bool
-	driveParamMutex *sync.Mutex
-	driveParam      []*DriveParam
-	continuousMode  bool
-
+	name             string
+	uuid             string
+	device           gatt.Device
+	peripheral       gatt.Peripheral
+	state            gatt.State
+	services         map[string]*BLEService
+	connected        bool
+	peripheralReady  chan error
+	seq              map[uint16]uint8
+	seqMutex         *sync.Mutex
+	driveLoopEnd     chan bool
+	driveParamMutex  *sync.Mutex
+	driveParam       []*DriveParam
+	continuousMode   bool
+	flyingState      uint32
+	alertState       uint32
+	battery          uint8
+	automaticTakeoff uint8
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -287,7 +291,7 @@ func (b *Adaptor) driveLoop() {
 				data = append(data, byte(dp.yaw))
 				data = append(data, byte(dp.gaz))
 				binary.LittleEndian.PutUint32(data[5:9], millisec)
-				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x00, data[0:9], 15)
+				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x02, data[0:9], 15)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -407,28 +411,121 @@ func (b *Adaptor) setMTU(mtu uint16) error {
 	return nil
 }
 
-func (b *Adaptor) notificationBase(c *gatt.Characteristic, b []byte, err error, nores bool, ressrvid string, rescharid string, resseqid uint16){
+func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err error, nores bool, ressrvid string, rescharid string, resseqid uint16){
 	if err != nil {
 		fmt.Printf("notification errror (%v)\n", err)
 		return
 	}
-	if len(b) < 6 {
+	if len(data) < 6 {
 		fmt.Printf("invalid notification\n")
-		fmt.Printf("%02x\n", b)
+		fmt.Printf("%02x\n", data)
 		return
 	}
-	var rcmdid uint16
-	reqtype = b[0]
-	reqseq = b[1]
-	reqprjid = b[2]
-	reqclsid = b[3]
-	binary.Read(b[4:6], binary.LittleEndian, &reqcmdid)
-	fmt.Printf("type = %02x, seq = %02x, prjid = %02x, class id = %02x, cmdid = %02x\n", reqtype, reqseq, reqprjid, reqclsid, reqcmdid)
-	fmt.Printf("%02x\n", b)
-	// case
-	// XXXXXXXX
-
+	var reqcmdid uint16
+	reqtype := data[0]
+	reqseq := data[1]
+	reqprjid := data[2]
+	reqclsid := data[3]
+	binary.Read(bytes.NewReader(data[4:6]), binary.LittleEndian, &reqcmdid)
+	switch reqtype {
+	case 1:
+		// response
+		fmt.Printf("unexpected request type (ack)\n")
+		fmt.Printf("%02x\n", data)
+	case 2:
+		switch reqprjid {
+		case 0: // common
+			switch reqclsid {
+			case 5:
+				switch reqcmdid {
+				case 1:
+					binary.Read(bytes.NewReader(data[6:7]), binary.LittleEndian, &b.battery)
+					fmt.Printf("battry %d\n", b.battery)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			default:
+				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
+				fmt.Printf("%02x\n", data)
+			}
+		case 2: // minidrone
+			switch reqclsid {
+			default:
+				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
+				fmt.Printf("%02x\n", data)
+			}
+		case 128: // common debug
+			// common debug project id
+			fmt.Printf("unexpected project id (common debug)\n")
+			fmt.Printf("%02x\n", data)
+		case 130: // minidrone debug
+			// unknown project id
+			fmt.Printf("unexpected project id (minidrone debug)\n")
+			fmt.Printf("%02x\n", data)
+		default:
+			// unknown project id
+			fmt.Printf("unexpected project id (unkown)\n")
+			fmt.Printf("%02x\n", data)
+		}
+	case 3:
+		// low latency request is exists ???
+		fmt.Printf("unexpected request type (low latency)\n")
+		fmt.Printf("%02x\n", data)
+	case 4:
+		switch reqprjid {
+		case 0: // common
+			switch reqclsid {
+			default:
+				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
+				fmt.Printf("%02x\n", data)
+			}
+		case 2: // minidrone
+			switch reqclsid {
+			case 3:
+				switch reqcmdid {
+				case 0:
+					fmt.Printf("FlatTrimChanged\n")
+				case 1:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.flyingState)
+					fmt.Printf("FlyingStateChanged %d\n", b.flyingState)
+				case 2:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.alertState)
+					fmt.Printf("AlertStateChanged %d\n", b.alertState)
+				case 3:
+					binary.Read(bytes.NewReader(data[6:7]), binary.LittleEndian, &b.automaticTakeoff)
+					fmt.Printf("AutomaticTakeoffMode %d\n", b.automaticTakeoff)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			default:
+				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
+				fmt.Printf("%02x\n", data)
+			}
+		case 128: // common debug
+			// common debug project id
+			fmt.Printf("unexpected project id (common debug)\n")
+			fmt.Printf("%02x\n", data)
+		case 130: // minidrone debug
+			// unknown project id
+			fmt.Printf("unexpected project id (minidrone debug)\n")
+			fmt.Printf("%02x\n", data)
+		default:
+			// unknown project id
+			fmt.Printf("unexpected project id (unkown)\n")
+			fmt.Printf("%02x\n", data)
+		}
+	default:
+		// unknown request type
+		fmt.Printf("unexpected request type (unkown)\n")
+		fmt.Printf("%02x\n", data)
+	}
 	if nores {
+		if reqtype == 0x04 {
+			fmt.Printf("unexpected request type (nores is true but need response)\n")
+			fmt.Printf("%02x\n", data)
+		}
 		return
 	}
 	// response
@@ -466,7 +563,8 @@ func (b *Adaptor) discoveryService() error {
 	}
 	for _, s := range ss {
 		b.services[s.UUID().String()] = NewBLEService(s.UUID().String(), s)
-		fmt.Println("discoveryService")
+		fmt.Printf("\t%s\n", s.UUID().String())
+		fmt.Println("\tdiscoveryService")
 		cs, err := b.peripheral.DiscoverCharacteristics(nil, s)
 		if err != nil {
 			fmt.Printf("Failed to discover characteristics, err: %s\n", err)
@@ -474,7 +572,8 @@ func (b *Adaptor) discoveryService() error {
 		}
 		for _, c := range cs {
 			b.services[s.UUID().String()].characteristics[c.UUID().String()] = NewBLECharacteristic(c.UUID().String(), c)
-			fmt.Println("discoveryDescripto")
+			fmt.Printf("\t\t%s\n", c.UUID().String())
+			fmt.Println("\t\tdiscoveryDescripto")
 			ds, err := b.peripheral.DiscoverDescriptors(nil, c)
 			if err != nil {
 				fmt.Printf("Failed to discover discriptors, err: %s\n", err)
@@ -482,35 +581,35 @@ func (b *Adaptor) discoveryService() error {
 			}
 			for _, d := range ds {
 				b.services[s.UUID().String()].characteristics[c.UUID().String()].descriptors[d.UUID().String()] = NewBLEDescriptor(d.UUID().String(), d)
+				fmt.Printf("\t\t\t%s\n", d.UUID().String())
 			}
 		}
 	}
-
 	// add service
 	if bles, ok := b.services["9a66fb000800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
 			// notify (request with no response on arnetwork)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-Notification REQ fb0f-")
-				b.notificationBase(c, b, err, true, nil, nil, 0)
+				b.notificationBase(c, data, err, true, "", "", 0)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
 			// notify (request with need response on arnetwork)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-Notification REQ fb0e-")
-				b.notificationBase(c, b, err, false, "9a66fa000800919111e4012d1540cb8e", "9a66fa1e0800919111e4012d1540cb8e", 0xfa1e)
+				b.notificationBase(c, data, err, false, "9a66fa000800919111e4012d1540cb8e", "9a66fa1e0800919111e4012d1540cb8e", 0xfa1e)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
 			// notify (response on arnetwork)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("Notification -RES fb1b-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
@@ -518,9 +617,9 @@ func (b *Adaptor) discoveryService() error {
 		}
 		if blec, ok := bles.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
 			// notify (low latency response on arnetwork)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-Notification RES fb1c-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
@@ -530,27 +629,27 @@ func (b *Adaptor) discoveryService() error {
 	if bles, ok := b.services["9a66fd210800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fd220800919111e4012d1540cb8e"]; ok {
 			// ????
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-??? fd22-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-FTP DATA fd23-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd240800919111e4012d1540cb8e"]; ok {
 			// notify (ftp control)
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-FTP CNTRL fd24-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
@@ -559,33 +658,32 @@ func (b *Adaptor) discoveryService() error {
 	if bles, ok := b.services["9a66fd510800919111e4012d1540cb8e"]; ok {
 		if blec, ok := bles.characteristics["9a66fd520800919111e4012d1540cb8e"]; ok {
 			// ????
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-??? fd52-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd530800919111e4012d1540cb8e"]; ok {
 			// ????
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-??? fd53-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 		if blec, ok := bles.characteristics["9a66fd540800919111e4012d1540cb8e"]; ok {
 			// ????
-			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, b []byte, err error){
+			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
 				fmt.Println("-??? fd54-")
-				fmt.Printf("%02x\n", b)
+				fmt.Printf("%02x\n", data)
 			}); err != nil {
 				fmt.Println(err)
 			}
 		}
 	}
-
 	return nil
 }
 
