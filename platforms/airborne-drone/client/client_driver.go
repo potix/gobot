@@ -198,16 +198,79 @@ func (client *Client) Gaz(duration time.Duration, speedFactor int8) error {
 	return nil
 }
 
+func (client *Client) Up(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, 0, 0, speedFactor)
+}
+
+func (client *Client) Down(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, 0, 0, -speedFactor)
+}
+
+func (client *Client) Forward(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, speedFactor, 0, 0)
+}
+
+func (client *Client) Backward(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, -speedFactor, 0, 0)
+}
+
+func (client *Client) Right(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, speedFactor, 0, 0, 0)
+}
+
+func (client *Client) Left(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, -speedFactor, 0, 0, 0)
+}
+
+func (client *Client) TurnRight(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, 0, speedFactor, 0)
+}
+
+func (client *Client) TurnLeft(speedFactor int8) {
+	if speedFactor < 0 {
+		speedFactor = 0
+	} else if speedFactor > 100 {
+		speedFactor = 100
+	}
+	client.adaptor.AddDrive(1, 1, 0, 0, -speedFactor, 0)
+}
+
 // command style
-//   example:
-//     cmd = client.NewCommander()
-//     time.Sleep(time.Duration(1 * time.Second)
-//     cmd.Up(50).Right(50).Do(time.Duration(500 * time.Millisecond))
-//     time.Sleep(time.Duration(1 * time.Second)
-//     cmd.Left(100).Do(time.Duration(500 * time.Millisecond))
-//     time.Sleep(time.Duration(1 * time.Second)
-//     cmd.Down(50).Right(50).Do(time.Duration(500 * time.Millisecond))
-//     time.Sleep(time.Duration(1 * time.Second)
 type Commander struct {
 	driveParam *DriveParam
 	client *Client
@@ -217,6 +280,11 @@ func (client *Client) NewCommander() *Commander {
 	cmd := new(Commander)
 	cmd.driveParam = new(DriveParam)
 	cmd.client = client
+	return cmd
+}
+
+func (cmd *Commander) ContinuousMode(onOff bool) *Commander {
+        cmd.client.adaptor.SetContinuousMode(onOff)
 	return cmd
 }
 
@@ -320,6 +388,16 @@ func (cmd *Commander) Do(duration time.Duration) *Commander {
 	cmd.client.adaptor.AddDrive(tc, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
 	return cmd
 }
+
+func (cmd *Commander) Reset() *Commander {
+	cmd.driveParam.flag = 0
+	cmd.driveParam.roll = 0
+	cmd.driveParam.pitch = 0
+	cmd.driveParam.yaw = 0
+	cmd.driveParam.gaz = 0
+	return cmd
+}
+
 
 //func (client *Client) Clockwise(speed float64) {
 //}

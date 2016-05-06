@@ -106,6 +106,46 @@ func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
 	a.adaptor().drone.SetContinuousMode(onOff)
 }
 
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Up(speedFactor int8) {
+        a.adaptor().drone.Up(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Down(speedFactor int8) {
+        a.adaptor().drone.Down(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Left(speedFactor int8) {
+        a.adaptor().drone.Left(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Right(speedFactor int8) {
+        a.adaptor().drone.Right(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Forward(speedFactor int8) {
+        a.adaptor().drone.Forward(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) Backward(speedFactor int8) {
+        a.adaptor().drone.Backward(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) TurnLeft(speedFactor int8) {
+        a.adaptor().drone.TurnLeft(speedFactor)
+}
+
+// speed can be a value from `0` to `100`.
+func (a *AirborneDroneDriver) TurnRight(speedFactor int8) {
+        a.adaptor().drone.TurnRight(speedFactor)
+}
+
 // Roll causes the drone to roll  (left -100 - right 100)
 func (a *AirborneDroneDriver) Roll(duration time.Duration, speedFactor int8) error {
 	return a.adaptor().drone.Roll(duration, speedFactor)

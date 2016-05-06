@@ -247,15 +247,7 @@ func (b *Adaptor) takeDriveParam(lastDP *DriveParam) *DriveParam {
 			// last param retry
 			return lastDP
 		} else {
-			// initialize (hover)
-			return &DriveParam {
-				pcmd: true,
-				flag: 0,
-				roll: 0,
-				pitch: 0,
-				yaw: 0,
-				gaz: 0,
-			}
+			return nil
 		}
 	}
 }
@@ -267,14 +259,7 @@ func (b *Adaptor) appendDriveParam(driveParam *DriveParam) {
 }
 
 func (b *Adaptor) driveLoop() {
-	dp := &DriveParam {
-		pcmd: true,
-		flag: 0,
-		roll: 0,
-		pitch: 0,
-		yaw: 0,
-		gaz: 0,
-	}
+	var dp *DriveParam = nil
 	start := time.Now()
 	ticker := time.NewTicker(DriveTick * time.Millisecond)
 	loop:
@@ -282,7 +267,11 @@ func (b *Adaptor) driveLoop() {
 		select {
 		case t := <-ticker.C:
 			dp = b.takeDriveParam(dp)
+			if dp == nil {
+				continue;
+			}
 			if dp.pcmd {
+				fmt.Printf(">>> %v\n", dp)
 				millisec := uint32(t.Sub(start).Seconds() * 1000)
 				data := make([]byte, 0, 9)
 				data = append(data, byte(dp.flag))

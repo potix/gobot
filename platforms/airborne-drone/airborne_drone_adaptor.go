@@ -26,6 +26,14 @@ type drone interface {
 	Pitch(duration time.Duration, speedFactor int8) error
 	Yaw(duration time.Duration, speedFactor int8) error
 	Gaz(duration time.Duration, speedFactor int8) error
+	Up(speedFactor int8)
+	Down(speedFactor int8)
+	Left(speedFactor int8)
+	Right(speedFactor int8)
+	Forward(speedFactor int8)
+	Backward(speedFactor int8)
+	TurnLeft(speedFactor int8)
+	TurnRight(speedFactor int8)
 	Hover()
 	NewCommander() *client.Commander
 }
