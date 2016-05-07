@@ -38,24 +38,38 @@ type DriveParam struct {
 
 // Represents a Connection to a BLE Peripheral
 type Adaptor struct {
-	name             string
-	uuid             string
-	device           gatt.Device
-	peripheral       gatt.Peripheral
-	state            gatt.State
-	services         map[string]*BLEService
-	connected        bool
-	peripheralReady  chan error
-	seq              map[uint16]uint8
-	seqMutex         *sync.Mutex
-	driveLoopEnd     chan bool
-	driveParamMutex  *sync.Mutex
-	driveParam       []*DriveParam
-	continuousMode   bool
-	flyingState      uint32
-	alertState       uint32
-	battery          uint8
-	automaticTakeoff uint8
+	name                    string
+	uuid                    string
+	device                  gatt.Device
+	peripheral              gatt.Peripheral
+	state                   gatt.State
+	services                map[string]*BLEService
+	connected               bool
+	peripheralReady         chan error
+	seq                     map[uint16]uint8
+	seqMutex                *sync.Mutex
+	driveLoopEnd            chan bool
+	driveParamMutex         *sync.Mutex
+	driveParam              []*DriveParam
+	continuousMode          bool
+	flyingState             uint32
+	alertState              uint32
+	battery                 uint8
+	automaticTakeoff        uint8
+	maxAltitudeCurrent      float32
+	maxAltitudeMin          float32
+	maxAltitudeMax          float32
+	maxTiltCurrent          float32
+	maxTiltMin              float32
+	maxTiltMax              float32
+	maxVerticalSpeedCurrent float32
+	maxVerticalSpeedMin     float32
+	maxVerticalSpeedMax     float32
+	maxRotationSpeedCurrent float32
+	maxRotationSpeedMin     float32
+	maxRotationSpeedMax     float32
+	headlightLeft		uint8
+	headlightRight		uint8
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -182,6 +196,13 @@ func (b *Adaptor) SetMaxRotationSpeed(rotationSpeed float32) error {
 	data := make([]byte, 0, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(rotationSpeed))
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x01, data, 10)
+}
+
+func (b *Adaptor) Headlight(left uint8, right uint8) error {
+	data := make([]byte, 2, 2)
+	data[0] = left
+	data[1] = right
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x16, 0x00, data, 8)
 }
 
 func (b *Adaptor) AddDrive(tickCnt int, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
@@ -434,6 +455,16 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
 				}
+			case 23:
+				switch reqcmdid {
+				case 0:
+					b.headlightLeft = data[6]
+					b.headlightRight = data[7]
+					fmt.Printf("headlightIntensityChanged left = %d, right = %d\n", b.headlightLeft, b.headlightRight)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
 			default:
 				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
 				fmt.Printf("%02x\n", data)
@@ -484,6 +515,38 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 				case 3:
 					binary.Read(bytes.NewReader(data[6:7]), binary.LittleEndian, &b.automaticTakeoff)
 					fmt.Printf("AutomaticTakeoffMode %d\n", b.automaticTakeoff)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 5:
+				switch reqcmdid {
+				case 0:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.maxVerticalSpeedCurrent)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxVerticalSpeedMin)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxVerticalSpeedMax)
+					fmt.Printf("MaxVerticalSpeedChanged current = %f, min = %f, max = %f\n", b.maxVerticalSpeedCurrent, b.maxVerticalSpeedMin, b.maxVerticalSpeedMax)
+				case 1:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.maxRotationSpeedCurrent)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxRotationSpeedMin)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxRotationSpeedMax)
+					fmt.Printf("MaxRotationSpeedChanged current = %f, min = %f, max = %f\n", b.maxRotationSpeedCurrent, b.maxRotationSpeedMin, b.maxRotationSpeedMax)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 9:
+				switch reqcmdid {
+				case 0:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.maxAltitudeCurrent)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxAltitudeMin)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxAltitudeMax)
+					fmt.Printf("MaxAltitudeChanged current = %f, min = %f, max = %f\n", b.maxAltitudeCurrent, b.maxAltitudeMin, b.maxAltitudeMax)
+				case 1:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.maxTiltCurrent)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxTiltMin)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxTiltMax)
+					fmt.Printf("MaxTilitChanged current = %f, min = %f, max = %f\n", b.maxTiltCurrent, b.maxTiltMin, b.maxTiltMax)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)

@@ -161,6 +161,10 @@ func (client *Client) SetContinuousMode(onOff bool) {
 	client.adaptor.SetContinuousMode(onOff)
 }
 
+func (client *Client) Headlight(left uint8, right uint8) error {
+	return client.adaptor.Headlight(left, right)
+}
+
 // roll, pitch, yaw, gaz
 func (client *Client) Roll(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
@@ -196,6 +200,10 @@ func (client *Client) Gaz(duration time.Duration, speedFactor int8) error {
 	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	client.adaptor.AddDrive(tc, 1, 0, 0, 0, speedFactor)
 	return nil
+}
+
+func (client *Client) Hover() {
+	client.adaptor.AddDrive(1, 0, 0, 0, 0, 0)
 }
 
 func (client *Client) Up(speedFactor int8) {
@@ -270,6 +278,10 @@ func (client *Client) TurnLeft(speedFactor int8) {
 	client.adaptor.AddDrive(1, 1, 0, 0, -speedFactor, 0)
 }
 
+func (client *Client) Stop() {
+	client.adaptor.AddDrive(1, 0, 0, 0, 0, 0)
+}
+
 // command style
 type Commander struct {
 	driveParam *DriveParam
@@ -285,6 +297,31 @@ func (client *Client) NewCommander() *Commander {
 
 func (cmd *Commander) ContinuousMode(onOff bool) *Commander {
         cmd.client.adaptor.SetContinuousMode(onOff)
+	return cmd
+}
+
+func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
+	cmd.client.adaptor.Headlight(left, right)
+	return cmd
+}
+
+func (cmd *Commander) FrontFlip() *Commander {
+	cmd.client.adaptor.Flip(0)
+	return cmd
+}
+
+func (cmd *Commander) BackFlip() *Commander {
+	cmd.client.adaptor.Flip(1)
+	return cmd
+}
+
+func (cmd *Commander) RightFlip() *Commander {
+	cmd.client.adaptor.Flip(2)
+	return cmd
+}
+
+func (cmd *Commander) LeftFlip() *Commander {
+	cmd.client.adaptor.Flip(3)
 	return cmd
 }
 
@@ -404,8 +441,4 @@ func (cmd *Commander) Reset() *Commander {
 
 //func (client *Client) Counterclockwise(speed float64) {
 //}
-
-func (client *Client) Hover() {
-	client.adaptor.AddDrive(1 /*tick count*/, 0 /*flag*/, 0 /*roll*/, 0 /*pitch*/, 0 /*yaw*/, 0 /*gaz*/)
-}
 

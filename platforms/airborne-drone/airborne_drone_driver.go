@@ -106,6 +106,11 @@ func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
 	a.adaptor().drone.SetContinuousMode(onOff)
 }
 
+// Headlight causes the drone to headlight (0-2255)
+func (a *AirborneDroneDriver) Headlight(left uint8, right uint8) error {
+	return a.adaptor().drone.Headlight(left, right)
+}
+
 // speed can be a value from `0` to `100`.
 func (a *AirborneDroneDriver) Up(speedFactor int8) {
         a.adaptor().drone.Up(speedFactor)
@@ -146,6 +151,11 @@ func (a *AirborneDroneDriver) TurnRight(speedFactor int8) {
         a.adaptor().drone.TurnRight(speedFactor)
 }
 
+// Hover makes the drone to hover in place.
+func (a *AirborneDroneDriver) Stop() {
+	a.adaptor().drone.Hover()
+}
+
 // Roll causes the drone to roll  (left -100 - right 100)
 func (a *AirborneDroneDriver) Roll(duration time.Duration, speedFactor int8) error {
 	return a.adaptor().drone.Roll(duration, speedFactor)
@@ -166,12 +176,13 @@ func (a *AirborneDroneDriver) Gaz(duration time.Duration, speedFactor int8) erro
 	return a.adaptor().drone.Gaz(duration, speedFactor)
 }
 
+// Hover makes the drone to hover in place.
+func (a *AirborneDroneDriver) Hover() {
+	a.adaptor().drone.Hover()
+}
+
 // NewCommander causes the drone to create commander
 func (a *AirborneDroneDriver) NewCommander() *client.Commander {
 	return a.adaptor().drone.NewCommander()
 }
 
-// Hover makes the drone to hover in place.
-func (a *AirborneDroneDriver) Hover() {
-	a.adaptor().drone.Hover()
-}

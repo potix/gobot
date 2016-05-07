@@ -22,10 +22,12 @@ type drone interface {
 	SetMaxVirticalSpeed(virticalSpeed float32) error
 	SetMaxRotationSpeed(rotationSpeed float32) error
 	SetContinuousMode(onOff bool)
+	Headlight(left uint8, right uint8) error
 	Roll(duration time.Duration, speedFactor int8) error
 	Pitch(duration time.Duration, speedFactor int8) error
 	Yaw(duration time.Duration, speedFactor int8) error
 	Gaz(duration time.Duration, speedFactor int8) error
+	Hover()
 	Up(speedFactor int8)
 	Down(speedFactor int8)
 	Left(speedFactor int8)
@@ -34,7 +36,7 @@ type drone interface {
 	Backward(speedFactor int8)
 	TurnLeft(speedFactor int8)
 	TurnRight(speedFactor int8)
-	Hover()
+	Stop()
 	NewCommander() *client.Commander
 }
 
