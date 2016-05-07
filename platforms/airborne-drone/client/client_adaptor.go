@@ -27,7 +27,7 @@ var DefaultClientOptions = []gatt.Option{
 
 var _ gobot.Adaptor = (*Adaptor)(nil)
 
-type DriveParam struct {
+type driveParam struct {
 	pcmd  bool
 	flag  uint8
 	roll  int8
@@ -50,7 +50,7 @@ type Adaptor struct {
 	seqMutex                    *sync.Mutex
 	driveLoopEnd                chan bool
 	driveParamMutex             *sync.Mutex
-	driveParam                  []*DriveParam
+	driveParam                  []*driveParam
 	continuousMode              bool
 	flyingState                 uint32
 	alertState                  uint32
@@ -76,6 +76,8 @@ type Adaptor struct {
 	pictureStateV1MassStorageID uint8
 	pictureEvent		    uint32
 	pictureEventError	    uint32
+	emergencyLoopChan           chan bool
+	emergencyLoopEnd            chan bool
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -90,9 +92,9 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		seqMutex: new(sync.Mutex),
 		driveLoopEnd: make(chan bool),
 		driveParamMutex: new(sync.Mutex),
-		driveParam: make([]*DriveParam, 0, 0),
-		continuousMode: false,
-		pictureStateV2: 0,
+		driveParam: make([]*driveParam, 0, 0),
+		emergencyLoopChan: make(chan bool),
+		emergencyLoopEnd: make(chan bool),
 	}
 	a.seq[0xfa0a] = 0
 	a.seq[0xfa0b] = 0
@@ -162,7 +164,8 @@ func (b *Adaptor) Connect() (errs []error) {
 		return errs
 	}
 
-	go b.driveLoop()
+	// start drive
+	b.startDrive()
 
 	return nil
 }
@@ -219,13 +222,21 @@ func (b *Adaptor) TakePicture() error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil, 6)
 }
 
+func (b *Adaptor) GetBattery() uint8 {
+        return b.battery
+}
+
+func (b *Adaptor) GetFlyingState() uint32 {
+        return b.flyingState
+}
+
 func (b *Adaptor) GetPictureState() uint32 {
         return b.pictureStateV2
 }
 
 func (b *Adaptor) AddDrive(tickCnt int, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
 	for i := 0; i < tickCnt; i++ {
-		dp := &DriveParam {
+		dp := &driveParam {
 			pcmd: true,
 			flag: flag,
 			roll: roll,
@@ -276,7 +287,7 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	return nil
 }
 
-func (b *Adaptor) takeDriveParam(lastDP *DriveParam) *DriveParam {
+func (b *Adaptor) takeDriveParam(lastDP *driveParam) *driveParam {
 	b.driveParamMutex.Lock()
 	defer b.driveParamMutex.Unlock()
 	if l := len(b.driveParam); l > 0 {
@@ -294,14 +305,16 @@ func (b *Adaptor) takeDriveParam(lastDP *DriveParam) *DriveParam {
 	}
 }
 
-func (b *Adaptor) appendDriveParam(driveParam *DriveParam) {
+func (b *Adaptor) appendDriveParam(driveParam *driveParam) {
 	b.driveParamMutex.Lock()
 	defer b.driveParamMutex.Unlock()
 	b.driveParam = append(b.driveParam, driveParam)
 }
 
 func (b *Adaptor) driveLoop() {
-	var dp *DriveParam = nil
+	dp := &driveParam{
+		pcmd: true,
+	}
 	start := time.Now()
 	ticker := time.NewTicker(DriveTick * time.Millisecond)
 	loop:
@@ -334,6 +347,24 @@ func (b *Adaptor) driveLoop() {
 	ticker.Stop()
 }
 
+func (b *Adaptor) emergencyLoop() {
+	loop:
+	for {
+		select {
+		case <-b.emergencyLoopChan:
+			b.Landing()
+		case <-b.emergencyLoopEnd:
+			break loop
+		}
+	}
+}
+
+// start drive
+func (b *Adaptor) startDrive() {
+	go b.driveLoop()
+	go b.emergencyLoop()
+}
+
 // Reconnect attempts to reconnect to the BLE peripheral. If it has an active connection
 // it will first close that connection and then establish a new connection.
 // Returns true on Successful reconnection
@@ -347,6 +378,7 @@ func (b *Adaptor) Reconnect() (errs []error) {
 // Disconnect terminates the connection to the BLE peripheral. Returns true on successful disconnect.
 func (b *Adaptor) Disconnect() (errs []error) {
 	b.driveLoopEnd <- true
+	b.emergencyLoopEnd <- true
 	b.peripheral.Device().CancelConnection(b.peripheral)
 	return
 }
@@ -540,6 +572,9 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 				case 1:
 					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.flyingState)
 					fmt.Printf("FlyingStateChanged %d\n", b.flyingState)
+					if (b.flyingState == 5 /* emergency */) {
+						b.emergencyLoopChan <- true
+					}
 				case 2:
 					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.alertState)
 					fmt.Printf("AlertStateChanged %d\n", b.alertState)

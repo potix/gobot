@@ -116,7 +116,18 @@ func (a *AirborneDroneDriver) TakePicture() error {
 	return a.adaptor().drone.TakePicture()
 }
 
-// GetPictureState return picture status (0 = ready, 1 = busy, 2 = not available)
+// GetBattery return battery (0 - 100)
+func (a *AirborneDroneDriver) GetBattery() uint8 {
+	return a.adaptor().drone.GetBattery()
+}
+
+// GetFlyingState return flying state
+// (0 = landed, 1 = takingoff, 2 = hovering, 3 = flying, 4 = landing, 5 = emergency, 6 = rolling, 7 = init)
+func (a *AirborneDroneDriver) GetFlyingState() uint32 {
+	return a.adaptor().drone.GetFlyingState()
+}
+
+// GetPictureState return picture state (0 = ready, 1 = busy, 2 = not available)
 func (a *AirborneDroneDriver) GetPictureState() uint32 {
 	return a.adaptor().drone.GetPictureState()
 }
