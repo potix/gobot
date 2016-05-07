@@ -23,6 +23,7 @@ type drone interface {
 	SetMaxRotationSpeed(rotationSpeed float32) error
 	SetContinuousMode(onOff bool)
 	Headlight(left uint8, right uint8) error
+	TakePicture() error
 	Roll(duration time.Duration, speedFactor int8) error
 	Pitch(duration time.Duration, speedFactor int8) error
 	Yaw(duration time.Duration, speedFactor int8) error

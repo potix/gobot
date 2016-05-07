@@ -165,6 +165,10 @@ func (client *Client) Headlight(left uint8, right uint8) error {
 	return client.adaptor.Headlight(left, right)
 }
 
+func (client *Client) TakePicture() error {
+	return client.adaptor.TakePicture()
+}
+
 // roll, pitch, yaw, gaz
 func (client *Client) Roll(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
@@ -305,6 +309,11 @@ func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
 	return cmd
 }
 
+func (cmd *Commander) TakePicture() *Commander {
+	cmd.client.adaptor.TakePicture()
+	return cmd
+}
+
 func (cmd *Commander) FrontFlip() *Commander {
 	cmd.client.adaptor.Flip(0)
 	return cmd
@@ -423,6 +432,7 @@ func (cmd *Commander) Do(duration time.Duration) *Commander {
 	}
 	cmd.driveParam.flag = 1
 	cmd.client.adaptor.AddDrive(tc, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
+	time.Sleep(time.Duration(tc) * DriveTick * time.Millisecond)
 	return cmd
 }
 

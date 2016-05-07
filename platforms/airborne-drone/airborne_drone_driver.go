@@ -111,6 +111,11 @@ func (a *AirborneDroneDriver) Headlight(left uint8, right uint8) error {
 	return a.adaptor().drone.Headlight(left, right)
 }
 
+// TakePicture causes the drone to take picture
+func (a *AirborneDroneDriver) TakePicture() error {
+	return a.adaptor().drone.TakePicture()
+}
+
 // speed can be a value from `0` to `100`.
 func (a *AirborneDroneDriver) Up(speedFactor int8) {
         a.adaptor().drone.Up(speedFactor)

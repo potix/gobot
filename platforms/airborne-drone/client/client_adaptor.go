@@ -205,6 +205,10 @@ func (b *Adaptor) Headlight(left uint8, right uint8) error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x16, 0x00, data, 8)
 }
 
+func (b *Adaptor) TakePicture() error {
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil, 6)
+}
+
 func (b *Adaptor) AddDrive(tickCnt int, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
 	for i := 0; i < tickCnt; i++ {
 		dp := &DriveParam {
@@ -242,10 +246,10 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	seq := b.seq[seqid]
 	b.seq[seqid] += 1
         b.seqMutex.Unlock()
-	value[0] = reqtype
-	value[1] = seq
-	value[2] = prjid
-	value[3] = clsid
+	value[0] = byte(reqtype)
+	value[1] = byte(seq)
+	value[2] = byte(prjid)
+	value[3] = byte(clsid)
 	binary.LittleEndian.PutUint16(value[4:6], cmdid)
 	if data != nil {
 		value = append(value[:6], data...)
@@ -298,11 +302,11 @@ func (b *Adaptor) driveLoop() {
 				fmt.Printf(">>> %v\n", dp)
 				millisec := uint32(t.Sub(start).Seconds() * 1000)
 				data := make([]byte, 9, 9)
-				data[0] = dp.flag
-				data[1] = dp.roll
-				data[2] = dp.pitch
-				data[3] = dp.yaw
-				data[4] = dp.gaz
+				data[0] = byte(dp.flag)
+				data[1] = byte(dp.roll)
+				data[2] = byte(dp.pitch)
+				data[3] = byte(dp.yaw)
+				data[4] = byte(dp.gaz)
 				binary.LittleEndian.PutUint32(data[5:9], millisec)
 				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x02, data[0:9], 15)
 				if err != nil {
