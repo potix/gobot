@@ -169,31 +169,31 @@ func (b *Adaptor) Landing() error {
 }
 
 func (b *Adaptor) Flip(value uint32) error {
-	data := make([]byte, 0, 4)
+	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], value)
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x04, 0x00, data, 10)
 }
 
 func (b *Adaptor) SetMaxAltitude(altitude float32) error {
-	data := make([]byte, 0, 4)
+	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(altitude))
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x00, data, 10)
 }
 
 func (b *Adaptor) SetMaxTilt(tilt float32) error {
-	data := make([]byte, 0, 4)
+	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(tilt))
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x01, data, 10)
 }
 
 func (b *Adaptor) SetMaxVirticalSpeed(virticalSpeed float32) error {
-	data := make([]byte, 0, 4)
+	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(virticalSpeed))
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x00, data, 10)
 }
 
 func (b *Adaptor) SetMaxRotationSpeed(rotationSpeed float32) error {
-	data := make([]byte, 0, 4)
+	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(rotationSpeed))
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x01, data, 10)
 }
@@ -237,12 +237,15 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	if !ok {
 		return errors.New("not found characteristic")
 	}
-	value := make([]byte, 0, size)
+	value := make([]byte, 6, size)
         b.seqMutex.Lock()
 	seq := b.seq[seqid]
 	b.seq[seqid] += 1
         b.seqMutex.Unlock()
-	value = append(value, reqtype, seq, prjid, clsid)
+	value[0] = reqtype
+	value[1] = seq
+	value[2] = prjid
+	value[3] = clsid
 	binary.LittleEndian.PutUint16(value[4:6], cmdid)
 	if data != nil {
 		value = append(value[:6], data...)
@@ -294,12 +297,12 @@ func (b *Adaptor) driveLoop() {
 			if dp.pcmd {
 				fmt.Printf(">>> %v\n", dp)
 				millisec := uint32(t.Sub(start).Seconds() * 1000)
-				data := make([]byte, 0, 9)
-				data = append(data, byte(dp.flag))
-				data = append(data, byte(dp.roll))
-				data = append(data, byte(dp.pitch))
-				data = append(data, byte(dp.yaw))
-				data = append(data, byte(dp.gaz))
+				data := make([]byte, 9, 9)
+				data[0] = dp.flag
+				data[1] = dp.roll
+				data[2] = dp.pitch
+				data[3] = dp.yaw
+				data[4] = dp.gaz
 				binary.LittleEndian.PutUint32(data[5:9], millisec)
 				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x02, data[0:9], 15)
 				if err != nil {
