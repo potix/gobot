@@ -116,6 +116,11 @@ func (a *AirborneDroneDriver) TakePicture() error {
 	return a.adaptor().drone.TakePicture()
 }
 
+// GetPictureState return picture status (0 = ready, 1 = busy, 2 = not available)
+func (a *AirborneDroneDriver) GetPictureState() uint32 {
+	return a.adaptor().drone.GetPictureState()
+}
+
 // speed can be a value from `0` to `100`.
 func (a *AirborneDroneDriver) Up(speedFactor int8) {
         a.adaptor().drone.Up(speedFactor)

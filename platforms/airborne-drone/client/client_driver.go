@@ -169,6 +169,10 @@ func (client *Client) TakePicture() error {
 	return client.adaptor.TakePicture()
 }
 
+func (client *Client) GetPictureState() uint32 {
+	return client.adaptor.GetPictureState()
+}
+
 // roll, pitch, yaw, gaz
 func (client *Client) Roll(duration time.Duration, speedFactor int8) error {
 	if speedFactor < -100 || speedFactor > 100 {
@@ -310,7 +314,9 @@ func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
 }
 
 func (cmd *Commander) TakePicture() *Commander {
-	cmd.client.adaptor.TakePicture()
+	if cmd.client.GetPictureState() == 0 {
+		cmd.client.adaptor.TakePicture()
+	}
 	return cmd
 }
 

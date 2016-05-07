@@ -24,6 +24,7 @@ type drone interface {
 	SetContinuousMode(onOff bool)
 	Headlight(left uint8, right uint8) error
 	TakePicture() error
+	GetPictureState() uint32
 	Roll(duration time.Duration, speedFactor int8) error
 	Pitch(duration time.Duration, speedFactor int8) error
 	Yaw(duration time.Duration, speedFactor int8) error
