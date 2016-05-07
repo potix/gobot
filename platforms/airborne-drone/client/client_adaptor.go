@@ -36,50 +36,46 @@ type DriveParam struct {
 	gaz   int8
 }
 
-type picture struct {
-	state         uint8
-	massStorageID uint8
-}
-
 // Represents a Connection to a BLE Peripheral
 type Adaptor struct {
-	name                    string
-	uuid                    string
-	device                  gatt.Device
-	peripheral              gatt.Peripheral
-	state                   gatt.State
-	services                map[string]*BLEService
-	connected               bool
-	peripheralReady         chan error
-	seq                     map[uint16]uint8
-	seqMutex                *sync.Mutex
-	driveLoopEnd            chan bool
-	driveParamMutex         *sync.Mutex
-	driveParam              []*DriveParam
-	continuousMode          bool
-	flyingState             uint32
-	alertState              uint32
-	battery                 uint8
-	automaticTakeoff        uint8
-	maxAltitudeCurrent      float32
-	maxAltitudeMin          float32
-	maxAltitudeMax          float32
-	maxTiltCurrent          float32
-	maxTiltMin              float32
-	maxTiltMax              float32
-	maxVerticalSpeedCurrent float32
-	maxVerticalSpeedMin     float32
-	maxVerticalSpeedMax     float32
-	maxRotationSpeedCurrent float32
-	maxRotationSpeedMin     float32
-	maxRotationSpeedMax     float32
-	headlightLeft		uint8
-	headlightRight		uint8
-	pictureState		uint32
-	pictureStateError	uint32
-	pictureInfo		[]*Picture
-	pictureEvent		uint32
-	pictureEventError	uint32
+	name                        string
+	uuid                        string
+	device                      gatt.Device
+	peripheral                  gatt.Peripheral
+	state                       gatt.State
+	services                    map[string]*BLEService
+	connected                   bool
+	peripheralReady             chan error
+	seq                         map[uint16]uint8
+	seqMutex                    *sync.Mutex
+	driveLoopEnd                chan bool
+	driveParamMutex             *sync.Mutex
+	driveParam                  []*DriveParam
+	continuousMode              bool
+	flyingState                 uint32
+	alertState                  uint32
+	battery                     uint8
+	automaticTakeoff            uint8
+	maxAltitudeCurrent          float32
+	maxAltitudeMin              float32
+	maxAltitudeMax              float32
+	maxTiltCurrent              float32
+	maxTiltMin                  float32
+	maxTiltMax                  float32
+	maxVerticalSpeedCurrent     float32
+	maxVerticalSpeedMin         float32
+	maxVerticalSpeedMax         float32
+	maxRotationSpeedCurrent     float32
+	maxRotationSpeedMin         float32
+	maxRotationSpeedMax         float32
+	headlightLeft               uint8
+	headlightRight              uint8
+	pictureStateV2	            uint32
+	pictureStateV2Error         uint32
+	pictureStateV1              uint8
+	pictureStateV1MassStorageID uint8
+	pictureEvent		    uint32
+	pictureEventError	    uint32
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -96,8 +92,7 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		driveParamMutex: new(sync.Mutex),
 		driveParam: make([]*DriveParam, 0, 0),
 		continuousMode: false,
-		pictureState: 0,
-		pictureInfo: make([]*Picture, 0, 0),
+		pictureStateV2: 0,
 	}
 	a.seq[0xfa0a] = 0
 	a.seq[0xfa0b] = 0
@@ -218,14 +213,14 @@ func (b *Adaptor) Headlight(left uint8, right uint8) error {
 }
 
 func (b *Adaptor) TakePicture() error {
-	if (b.pictureState != 0) {
-		return errors.new("Now it is't possible to take a picture ")
+	if (b.pictureStateV2 != 0) {
+		return errors.New("Now it is't possible to take a picture ")
 	}
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil, 6)
 }
 
 func (b *Adaptor) GetPictureState() uint32 {
-        return b.pictureState
+        return b.pictureStateV2
 }
 
 func (b *Adaptor) AddDrive(tickCnt int, flag uint8, roll int8, pitch int8, yaw int8, gaz int8) {
@@ -573,16 +568,14 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 				}
 			case 7:
 				switch reqcmdid {
-				case 0: // ... deplicated ...
-					pic = new(picture)
-					pic.state = data[6]
-					pic.massStorageID = data[7]
-					b.pictureInfo = append(b.pictureInfo, pic)
-					fmt.Printf("PictureStateChanged state = %d, massStorageID = %d\n", pic.state, pic.massStorageID)
+				case 0: // ... deprecated ...
+					b.pictureStateV1 = data[6]
+					b.pictureStateV1MassStorageID = data[7]
+					fmt.Printf("PictureStateChangedV1 state = %d, massStorageID = %d\n", b.pictureStateV1, b.pictureStateV1MassStorageID)
 				case 1:
-					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.pictureState)
-					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.pictureStateError)
-					fmt.Printf("PictureStateChangedV2 state = %d, error = %d\n", b.pictureState, b.pictureStateError)
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.pictureStateV2)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.pictureStateV2Error)
+					fmt.Printf("PictureStateChangedV2 state = %d, error = %d\n", b.pictureStateV2, b.pictureStateV2Error)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
