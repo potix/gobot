@@ -79,9 +79,9 @@ type Adaptor struct {
 	maxRotationSpeedCurrent     float32
 	maxRotationSpeedMin         float32
 	maxRotationSpeedMax         float32
-	maxHorizontalSpeedCurrent     float32
-	maxHorizontalSpeedMin         float32
-	maxHorizontalSpeedMax         float32
+	maxHorizontalSpeedCurrent   float32
+	maxHorizontalSpeedMin       float32
+	maxHorizontalSpeedMax       float32
 	supportedAccessory          uint32
 	productName                 string
 	productSoftwareVersion      string
@@ -131,10 +131,15 @@ type Adaptor struct {
         massStoragePlugged          uint8
         massStorageFull             uint8
         massStorageInternal         uint8
+	downloadPath                string
+	autoDownloadMode            bool
+	autoDownloadMutex           *sync.Mutex
+	autoDownloadChan            chan bool
+	autoDownloadEnd             chan bool
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
-func NewAdaptor(name string, uuid string) *Adaptor {
+func NewAdaptor(name string, uuid string, downloadPath string) *Adaptor {
 	a := &Adaptor{
 		name:      name,
 		uuid:      uuid,
@@ -152,6 +157,10 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		ftpReqChan: make(chan *ftpCommand),
 		ftpResChan: make(chan *ftpResult),
 		ftpLoopEnd: make(chan bool),
+                downloadPath: downloadPath,
+		autoDownloadMutex: new(sync.Mutex),
+		autoDownloadChan: make(chan bool),
+		autoDownloadEnd: make(chan bool),
 	}
 	a.seq[0xfa0a] = 0
 	a.seq[0xfa0b] = 0
@@ -389,13 +398,6 @@ func (b *Adaptor) TakePicture() error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil)
 }
 
-// TODO
-//   all settings(retry) 00-02-00        ProductNameChanged 00-03-02  ProductSerialHighChanged 00-03-04  ProductSerialLowChanged 00-03-05 SupportedAccessoriesListChanged 00-1b(27)-00
-//                                ProductVersionChanged 00-03-03 AutoCountryChanged 00-03-07 CountryChanged 00-03-06 AccessoryConfigChanged  00-1b(27)-01 MaxHorizontalSpeedChanged 02-05-03
-//                                AllSettingsChanged 00-03-00
-//   AllStates(retry)    00-04-00  DeviceLibARCommandsVersion 00-12(18)-02 ProductModel 00-05-09 HeadlightsState 00-23-00 AnimationsStateList 00-19(25)-00 ChargingInfo 00-1d(29)-03
-//                                 MassStorageStateListChanged 00-05-02
-
 func (b *Adaptor) FTPList(path string) ([]byte, error) {
 	ftpCmd := &ftpCommand {
 		cmd: "LIS",
@@ -456,6 +458,12 @@ func (b *Adaptor) SetContinuousMode(continuousMode bool) {
 	b.driveParamMutex.Lock()
 	defer b.driveParamMutex.Unlock()
 	b.continuousMode = continuousMode
+}
+
+func (b *Adaptor) SetAutoDownloadMode (autoDownloadMode bool) {
+	b.autoDownloadMutex.Lock()
+	defer b.autoDownloadMutex.Unlock()
+	b.autoDownloadMode = autoDownloadMode
 }
 
 func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte) error {
@@ -657,11 +665,37 @@ func (b *Adaptor) ftpLoop() {
 	}
 }
 
+func (b *Adaptor) autoDownloadLoop() {
+	loop:
+	for {
+		select {
+		case <-b.autoDownloadChan:
+			b.autoDownloadMutex.Lock()
+			m := b.autoDownloadMode
+			b.autoDownloadMutex.Unlock()
+			if !m {
+				continue
+			}
+
+			// FTP LIST internal_000
+			// find airbone prefix dir
+			// FTP LIST found dir
+			// download files
+			// delete downloaded files
+
+
+		case <-b.autoDownloadEnd:
+			break loop
+		}
+	}
+}
+
 // start drive
 func (b *Adaptor) startDrive() {
 	go b.driveLoop()
 	go b.emergencyLoop()
 	go b.ftpLoop()
+	go b.autoDownloadLoop()
 }
 
 // Reconnect attempts to reconnect to the BLE peripheral. If it has an active connection
@@ -1010,6 +1044,10 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.pictureEvent)
 					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.pictureEventError)
 					fmt.Printf("PictureEventChanged state = %d, error = %d\n", b.pictureEvent, b.pictureEventError)
+					if b.pictureEvent == 0 && b.pictureEventError == 0 {
+						// auto download start
+						b.autoDownloadChan <- true
+					}
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)

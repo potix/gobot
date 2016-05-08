@@ -13,17 +13,19 @@ type Client struct {
 
 type Config struct {
 	DroneAddress string
+	DownloadPath string
 }
 
 func DefaultConfig() Config {
 	return Config{
 		DroneAddress:   "00:00:00:00:00:00",
+		DownloadPath:   "/var/tmp/airborn_drone",
 	}
 }
 
 func Connect(config Config) (*Client, error) {
 	client := &Client{Config: config}
-	client.adaptor = NewAdaptor("ble", client.Config.DroneAddress)
+	client.adaptor = NewAdaptor("ble", client.Config.DroneAddress, client.Config.DownloadPath)
 	return client, client.Connect()
 }
 

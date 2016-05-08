@@ -80,6 +80,9 @@ func NewAirborneDroneAdaptor(name string, v ...string) *AirborneDroneAdaptor {
 	if len(v) > 0 {
 		a.config.DroneAddress = v[0]
 	}
+	if len(v) > 1 {
+		a.config.DownloadPath = v[1]
+	}
 
 	return a
 }
