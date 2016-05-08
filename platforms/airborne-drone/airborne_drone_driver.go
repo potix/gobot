@@ -106,6 +106,11 @@ func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
 	a.adaptor().drone.SetContinuousMode(onOff)
 }
 
+// SetAutoDownloadMode causes the drone to set autodownload mode
+func (a *AirborneDroneDriver) SetAutoDownloadMode(onOff bool) {
+	a.adaptor().drone.SetAutoDownloadMode(onOff)
+}
+
 // SetCutOutMode causes the drone to SetCutOutMode
 func (a *AirborneDroneDriver) SetCutOutMode(onOff bool) error {
 	return a.adaptor().drone.SetCutOutMode(onOff)

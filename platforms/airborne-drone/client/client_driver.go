@@ -113,6 +113,10 @@ func (client *Client) SetContinuousMode(onOff bool) {
 	client.adaptor.SetContinuousMode(onOff)
 }
 
+func (client *Client) SetAutoDownloadMode(onOff bool) {
+	client.adaptor.SetAutoDownloadMode(onOff)
+}
+
 func (client *Client) SetCutOutMode(onOff bool) error {
 	return client.adaptor.SetCutOutMode(onOff)
 }

@@ -22,6 +22,7 @@ type drone interface {
 	SetMaxVirticalSpeed(virticalSpeed float32) error
 	SetMaxRotationSpeed(rotationSpeed float32) error
 	SetContinuousMode(onOff bool)
+	SetAutoDownloadMode(onOff bool)
 	SetCutOutMode(onOff bool) error
 	FlatTrim() error
 	Emergency() error
