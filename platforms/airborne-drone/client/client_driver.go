@@ -127,16 +127,28 @@ func (client *Client) Headlight(left uint8, right uint8) error {
 	return client.adaptor.Headlight(left, right)
 }
 
-func (client *Client) HeadlightFlash() error {
-	return client.adaptor.HeadlightFlash()
+func (client *Client) HeadlightFlashStart() error {
+	return client.adaptor.HeadlightFlashStart()
 }
 
-func (client *Client) HeadlightBlink() error {
-	return client.adaptor.HeadlightBlink()
+func (client *Client) HeadlightBlinkStart() error {
+	return client.adaptor.HeadlightBlinkStart()
 }
 
-func (client *Client) HeadlightOscillation() error {
-	return client.adaptor.HeadlightOscillation()
+func (client *Client) HeadlightOscillationStart() error {
+	return client.adaptor.HeadlightOscillationStart()
+}
+
+func (client *Client) HeadlightFlashStop() error {
+	return client.adaptor.HeadlightFlashStop()
+}
+
+func (client *Client) HeadlightBlinkStop() error {
+	return client.adaptor.HeadlightBlinkStop()
+}
+
+func (client *Client) HeadlightOscillationStop() error {
+	return client.adaptor.HeadlightOscillationStop()
 }
 
 func (client *Client) TakePicture() error {
@@ -322,18 +334,33 @@ func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
 	return cmd
 }
 
-func (cmd *Commander) HeadlightFlash() *Commander {
-	cmd.client.adaptor.HeadlightFlash()
+func (cmd *Commander) HeadlightFlashStart() *Commander {
+	cmd.client.adaptor.HeadlightFlashStart()
 	return cmd
 }
 
-func (cmd *Commander) HeadlightBlink() *Commander {
-	cmd.client.adaptor.HeadlightBlink()
+func (cmd *Commander) HeadlightBlinkStart() *Commander {
+	cmd.client.adaptor.HeadlightBlinkStart()
 	return cmd
 }
 
-func (cmd *Commander) HeadlightOscillation() *Commander {
-	cmd.client.adaptor.HeadlightOscillation()
+func (cmd *Commander) HeadlightOscillationStart() *Commander {
+	cmd.client.adaptor.HeadlightOscillationStart()
+	return cmd
+}
+
+func (cmd *Commander) HeadlightFlashStop() *Commander {
+	cmd.client.adaptor.HeadlightFlashStop()
+	return cmd
+}
+
+func (cmd *Commander) HeadlightBlinkStop() *Commander {
+	cmd.client.adaptor.HeadlightBlinkStop()
+	return cmd
+}
+
+func (cmd *Commander) HeadlightOscillationStop() *Commander {
+	cmd.client.adaptor.HeadlightOscillationStop()
 	return cmd
 }
 

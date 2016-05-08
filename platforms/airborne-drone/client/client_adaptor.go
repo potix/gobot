@@ -79,6 +79,19 @@ type Adaptor struct {
 	maxRotationSpeedCurrent     float32
 	maxRotationSpeedMin         float32
 	maxRotationSpeedMax         float32
+	maxHorizontalSpeedCurrent     float32
+	maxHorizontalSpeedMin         float32
+	maxHorizontalSpeedMax         float32
+	supportedAccessory          uint32
+	productName                 string
+	productSoftwareVersion      string
+	productHardwareVersion      string
+	productSerialHigh           string
+	productSerialLow            string
+	productModel                uint32
+	libARCommandsVersion        string
+	currentCountry              string
+	autoCountry                 uint8
 	currentDate                 string
 	currentTime                 string
 	headlightLeft               uint8
@@ -105,6 +118,19 @@ type Adaptor struct {
 	ftpReqChan                  chan *ftpCommand
 	ftpResChan                  chan *ftpResult
 	ftpLoopEnd                  chan bool
+	sensorIMU                   uint8
+	sensorBarometer             uint8
+	sensorUltrasound            uint8
+	sensorGPS                   uint8
+	sensorMagnetometer          uint8
+	sensorVerticalCamera        uint8
+	massStorageID               uint8
+	massStorageName             string
+        massStorageSize             uint32
+        massStorageUsedSize         uint32
+        massStoragePlugged          uint8
+        massStorageFull             uint8
+        massStorageInternal         uint8
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -196,13 +222,31 @@ func (b *Adaptor) Connect() (errs []error) {
 	}
 
 
+	// set datetime
+	b.setDateTime()
+
+	// all settings
+	b.allSettings()
+
+	// all states
+	b.allStates()
+
+	// start drive
+	b.startDrive()
+
+	return nil
+}
+
+func (b *Adaptor) setDateTime() {
 	now := time.Now()
 	data := make([]byte, 0, 0)
 
 	// set current date
 	data = append(data, []byte(fmt.Sprintf("%02d-%02d-%02d", now.Year(), now.Month(), now.Day()))...)
 	data = append(data, 0x00)
-        b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x01, data)
+        if err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x01, data); err != nil {
+		fmt.Println("could not set current date")
+	}
 
 	// set current time
 	var pn  string
@@ -219,12 +263,23 @@ func (b *Adaptor) Connect() (errs []error) {
 		data = append(data, []byte(fmt.Sprintf("T%02d%02d%02d%s%02d%02d", now.Hour(), now.Minute(), now.Second(), pn, offset / 3600, (offset % 3600) / 60))...)
 	}
 	data = append(data, 0x00)
-        b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x02, data)
+        if err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x02, data); err != nil {
+		fmt.Println("could not set current time")
+	}
+}
 
-	// start drive
-	b.startDrive()
+func (b *Adaptor) allSettings() {
+	// retry .... ummm
+        if err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x02, 0x00, nil); err != nil {
+		fmt.Println("could not get all settings")
+	}
+}
 
-	return nil
+func (b *Adaptor) allStates() {
+	// retry .... ummm
+        if err :=  b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x00, nil); err != nil {
+		fmt.Println("could not get all states")
+	}
 }
 
 func (b *Adaptor) TakeOff() error {
@@ -291,22 +346,40 @@ func (b *Adaptor) Headlight(left uint8, right uint8) error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x16, 0x00, data)
 }
 
-func (b *Adaptor) HeadlightFlash() error {
+func (b *Adaptor) HeadlightFlashStart() error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], 0)
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
 }
 
-func (b *Adaptor) HeadlightBlink() error {
+func (b *Adaptor) HeadlightBlinkStart() error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], 1)
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
 }
 
-func (b *Adaptor) HeadlightOscillation() error {
+func (b *Adaptor) HeadlightOscillationStart() error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], 2)
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
+}
+
+func (b *Adaptor) HeadlightFlashStop() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 0)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x01, data)
+}
+
+func (b *Adaptor) HeadlightBlinkStop() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 1)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x01, data)
+}
+
+func (b *Adaptor) HeadlightOscillationStop() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 2)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x01, data)
 }
 
 func (b *Adaptor) TakePicture() error {
@@ -317,8 +390,6 @@ func (b *Adaptor) TakePicture() error {
 }
 
 // TODO
-//   current date 00-04-01 2016-04-26  (isofirmat)  CurrentDateChanged 00-05-04
-//   current time 00-04-01 T015736+0900 (isofirmat) CurrentTimeChanged 00-05-05
 //   all settings(retry) 00-02-00        ProductNameChanged 00-03-02  ProductSerialHighChanged 00-03-04  ProductSerialLowChanged 00-03-05 SupportedAccessoriesListChanged 00-1b(27)-00
 //                                ProductVersionChanged 00-03-03 AutoCountryChanged 00-03-07 CountryChanged 00-03-06 AccessoryConfigChanged  00-1b(27)-01 MaxHorizontalSpeedChanged 02-05-03
 //                                AllSettingsChanged 00-03-00
@@ -733,6 +804,18 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 				case 1:
 					binary.Read(bytes.NewReader(data[6:7]), binary.LittleEndian, &b.battery)
 					fmt.Printf("battry %d\n", b.battery)
+				case 9:
+					binary.Read(bytes.NewReader(data[6:7]), binary.LittleEndian, &b.productModel)
+					fmt.Printf("ProductModel model = %d\n", b.productModel)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 18:
+				switch reqcmdid {
+				case 2:
+					b.libARCommandsVersion = string(data[6:len(data) - 1])
+					fmt.Printf("DeviceLibARCommandsVersion version = %s\n", b.libARCommandsVersion)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
@@ -757,6 +840,21 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &animationRate)
 					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &animationError)
 					fmt.Printf("AnimationsState list = %d, rate = %d, error = %d\n", animationList, animationRate, animationError)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 27:
+				switch reqcmdid {
+				case 0:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.supportedAccessory)
+					fmt.Printf("SupportedAccessoriesListChanged accessory = %d\n", b.supportedAccessory)
+				case 1:
+					var newAccessory uint32
+					var accessoryConfigError uint32
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &newAccessory)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &accessoryConfigError)
+					fmt.Printf("AccessoryConfigChanged newAccessory = %d error = %d\n", newAccessory, accessoryConfigError)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
@@ -814,14 +912,88 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
 				}
+			case 3:
+				switch reqcmdid {
+				case 0:
+					// AllSettingsChanged
+					fmt.Printf("AllSettingsChanged\n")
+				case 2:
+					b.productName = string(data[6:len(data) - 1])
+					fmt.Printf("ProductNameChanged productName = %s\n", b.productName)
+				case 3:
+					var idx int = 0;
+					for d := range data[6:] {
+						idx += 1
+						if d == 0 {
+							break
+						}
+					}
+					b.productSoftwareVersion = string(data[6:6+idx-1])
+					b.productHardwareVersion = string(data[6+idx-1:len(data) - 1])
+					fmt.Printf("ProductVersionChanged productSoftwareVersion = %s, productHardwareVersion = %s\n", b.productSoftwareVersion, b.productHardwareVersion )
+				case 4:
+					b.productSerialHigh = string(data[6:len(data) - 1])
+					fmt.Printf("ProductSerialHighChanged productSerialHigh = %s\n", b.productSerialHigh)
+				case 5:
+					b.productSerialLow = string(data[6:len(data) - 1])
+					fmt.Printf("ProductSerialLowChanged productSerialLow = %s\n", b.productSerialLow)
+				case 6:
+					b.currentCountry = string(data[6:len(data) - 1])
+					fmt.Printf("CountryChanged currentCountry = %s\n", b.currentCountry)
+				case 7:
+					b.autoCountry = data[6]
+					fmt.Printf("AutoCountryChanged autoCountry = %d\n", b.autoCountry)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
 			case 5:
 				switch reqcmdid {
+				case 0:
+					// AllStatesChanged
+					fmt.Printf("AllStatesChanged\n")
+				case 2:
+					b.massStorageID = data[6]
+					b.massStorageName = string(data[7:len(data) - 1])
+					fmt.Printf("MassStorageStateListChanged id = %d, name = %s\n", b.massStorageID, b.massStorageName)
+				case 3:
+					b.massStorageID = data[6]
+					binary.Read(bytes.NewReader(data[7:11]), binary.LittleEndian, &b.massStorageSize)
+					binary.Read(bytes.NewReader(data[11:15]), binary.LittleEndian, &b.massStorageUsedSize)
+					b.massStoragePlugged = data[15]
+					b.massStorageFull = data[16]
+					b.massStorageInternal = data[17]
+					fmt.Printf("MassStorageInfoStateListChanged id = %d, size = %d, usedSize = %d, plugged = %d, full = %d, internal = %d \n",
+					    b.massStorageID, b.massStorageSize, b.massStorageUsedSize, b.massStoragePlugged, b.massStorageFull, b.massStorageInternal)
 				case 4:
 					b.currentDate = string(data[6:len(data) - 1])
-					fmt.Printf("CurrentDateChanged date = %d\n", b.currentDate)
+					fmt.Printf("CurrentDateChanged date = %s\n", b.currentDate)
 				case 5:
 					b.currentTime = string(data[6:len(data) - 1])
-					fmt.Printf("CurrentTimeChanged time = %d\n", b.currentTime)
+					fmt.Printf("CurrentTimeChanged time = %s\n", b.currentTime)
+				case 8:
+					var sendorType uint32
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &sendorType)
+					switch sendorType {
+					case 0:
+						b.sensorIMU = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorIMU = %d\n", b.sensorIMU)
+					case 1:
+						b.sensorBarometer = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorBarometer = %d\n", b.sensorBarometer)
+					case 2:
+						b.sensorUltrasound = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorUltrasound = %d\n", b.sensorUltrasound)
+					case 3:
+						b.sensorGPS = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorGPS = %d\n", b.sensorGPS)
+					case 4:
+						b.sensorMagnetometer = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorMagnetometer = %d\n", b.sensorMagnetometer)
+					case 5:
+						b.sensorVerticalCamera = data[10]
+						fmt.Printf("SensorsStatesListChanged sensorVerticalCamera = %d\n", b.sensorVerticalCamera)
+					}
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
@@ -875,6 +1047,11 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxRotationSpeedMin)
 					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxRotationSpeedMax)
 					fmt.Printf("MaxRotationSpeedChanged current = %f, min = %f, max = %f\n", b.maxRotationSpeedCurrent, b.maxRotationSpeedMin, b.maxRotationSpeedMax)
+				case 3:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.maxHorizontalSpeedCurrent)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxHorizontalSpeedMin)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxHorizontalSpeedMax)
+					fmt.Printf("MaxHorizontalSpeedChanged current = %f, min = %f, max = %f\n", b.maxHorizontalSpeedCurrent, b.maxHorizontalSpeedMin, b.maxHorizontalSpeedMax)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)

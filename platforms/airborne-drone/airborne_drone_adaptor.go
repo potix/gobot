@@ -26,9 +26,12 @@ type drone interface {
 	FlatTrim() error
 	Emergency() error
 	Headlight(left uint8, right uint8) error
-	HeadlightFlash() error
-	HeadlightBlink() error
-	HeadlightOscillation() error
+	HeadlightFlashStart() error
+	HeadlightBlinkStart() error
+	HeadlightOscillationStart() error
+	HeadlightFlashStop() error
+	HeadlightBlinkStop() error
+	HeadlightOscillationStop() error
 	TakePicture() error
 	FTPList(path string) ([]byte, error)
 	FTPGet(path string) ([]byte, error)

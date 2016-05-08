@@ -126,19 +126,34 @@ func (a *AirborneDroneDriver) Headlight(left uint8, right uint8) error {
 	return a.adaptor().drone.Headlight(left, right)
 }
 
-// HeadlightFlash causes the drone to headlight flash 
-func (a *AirborneDroneDriver) HeadlightFlash() error {
-	return a.adaptor().drone.HeadlightFlash()
+// HeadlightFlashStart causes the drone to headlight flash start 
+func (a *AirborneDroneDriver) HeadlightFlashStart() error {
+	return a.adaptor().drone.HeadlightFlashStart()
 }
 
-// HeadlightBlink causes the drone to headlight blink
-func (a *AirborneDroneDriver) HeadlightBlink() error {
-	return a.adaptor().drone.HeadlightBlink()
+// HeadlightBlinkStart causes the drone to headlight blink start
+func (a *AirborneDroneDriver) HeadlightBlinkStart() error {
+	return a.adaptor().drone.HeadlightBlinkStart()
 }
 
-// HeadlightOscillation causes the drone to headlight oscillation
-func (a *AirborneDroneDriver) HeadlightOscillation() error {
-	return a.adaptor().drone.HeadlightOscillation()
+// HeadlightOscillationStart causes the drone to headlight oscillation start
+func (a *AirborneDroneDriver) HeadlightOscillationStart() error {
+	return a.adaptor().drone.HeadlightOscillationStart()
+}
+
+// HeadlightFlashStop causes the drone to headlight flash stop
+func (a *AirborneDroneDriver) HeadlightFlashStop() error {
+	return a.adaptor().drone.HeadlightFlashStop()
+}
+
+// HeadlightBlinkStop causes the drone to headlight blink stop
+func (a *AirborneDroneDriver) HeadlightBlinkStop() error {
+	return a.adaptor().drone.HeadlightBlinkStop()
+}
+
+// HeadlightOscillationStop causes the drone to headlight oscillation stop
+func (a *AirborneDroneDriver) HeadlightOscillationStop() error {
+	return a.adaptor().drone.HeadlightOscillationStop()
 }
 
 // TakePicture causes the drone to take picture
