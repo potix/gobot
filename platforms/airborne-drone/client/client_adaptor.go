@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"os"
         "time"
         "sync"
         "math"
         "errors"
         "bytes"
+        "regexp"
         "crypto/md5"
 	"encoding/binary"
 
@@ -666,8 +668,42 @@ func (b *Adaptor) ftpLoop() {
 }
 
 func (b *Adaptor) autoDownloadLoop() {
+	var failcnt int = 0
+	var result []byte
+	var err error
+	var rpath string
+	for {
+		result, err = b.FTPList("/internal_000")
+		if err == nil {
+			break
+		}
+		failcnt += 1
+		if failcnt > 2 {
+			fmt.Println("could not start auto download (not found /internal_000)")
+			return
+		}
+	}
+	s := string(result)
+	for _, s = range strings.Split(s, "\n") {
+		re:= regexp.MustCompile("^[^ \t]+[ \t]+[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+(Airborne[^ \t\n]+)")
+		group := re.FindStringSubmatch(s)
+		if len(group) > 1 {
+			rpath = fmt.Sprintf("/internal_000/%s", group[1])
+			break
+		}
+	}
+	if rpath == "" {
+		fmt.Println("could not start auto download (not found /internal_000/Airborn*)")
+		return
+	}
+	fmt.Printf("remote path = %s\n", rpath)
+	if err = os.MkdirAll(b.downloadPath, 0755); err != nil {
+		fmt.Printf("could not start auto download (could not creat local path %s)\n", b.downloadPath)
+		return
+	}
 	loop:
 	for {
+		next:
 		select {
 		case <-b.autoDownloadChan:
 			b.autoDownloadMutex.Lock()
@@ -676,14 +712,20 @@ func (b *Adaptor) autoDownloadLoop() {
 			if !m {
 				continue
 			}
-
-			// FTP LIST internal_000
-			// find airbone prefix dir
-			// FTP LIST found dir
+			for {
+				result, err = b.FTPList(rpath)
+				if err == nil {
+					break
+				}
+				failcnt += 1
+				if failcnt > 2 {
+					fmt.Println("give up ftp list")
+					break next
+				}
+			}
+			println(string(result))
 			// download files
 			// delete downloaded files
-
-
 		case <-b.autoDownloadEnd:
 			break loop
 		}

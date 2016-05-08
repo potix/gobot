@@ -11,10 +11,11 @@ import (
 func main() {
 	gbot := gobot.NewGobot()
 
-	airborneDroneAdaptor := airbornedrone.NewAirborneDroneAdaptor("swat", "E0:14:0A:BF:3D:80")
+	airborneDroneAdaptor := airbornedrone.NewAirborneDroneAdaptor("swat", "E0:14:0A:BF:3D:80", "/var/tmp/airborn_drone")
 	drone := airbornedrone.NewAirborneDroneDriver(airborneDroneAdaptor, "swat")
 
 	work := func() {
+/*
 		gobot.On(drone.Event("flying"), func(data interface{}) {
 			gobot.After(3*time.Second, func() {
 				cmd := drone.NewCommander()
@@ -31,6 +32,7 @@ func main() {
 			})
 		})
 		drone.TakeOff()
+*/
 /*
 		gobot.On(drone.Event("flying"), func(data interface{}) {
 			gobot.After(3*time.Second, func() {
@@ -118,6 +120,8 @@ func main() {
 		fmt.Println(string(result), err)
 		time.Sleep(time.Duration(120 * time.Second))
 */
+		drone.SetAutoDownloadMode(true)
+		time.Sleep(time.Duration(120 * time.Second))
 	}
 
 	robot := gobot.NewRobot("drone",
