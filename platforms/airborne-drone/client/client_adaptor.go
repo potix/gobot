@@ -9,6 +9,7 @@ import (
         "math"
         "errors"
         "bytes"
+        "crypto/md5"
 	"encoding/binary"
 
 	"github.com/potix/gobot"
@@ -34,6 +35,16 @@ type driveParam struct {
 	pitch int8
 	yaw   int8
 	gaz   int8
+}
+
+type ftpCommand struct {
+	cmd string
+	path string
+}
+
+type ftpResult struct {
+	result []byte
+	err error
 }
 
 // Represents a Connection to a BLE Peripheral
@@ -76,8 +87,17 @@ type Adaptor struct {
 	pictureStateV1MassStorageID uint8
 	pictureEvent		    uint32
 	pictureEventError	    uint32
+	disconnectionCause          uint32
 	emergencyLoopChan           chan bool
 	emergencyLoopEnd            chan bool
+	ftpBuffer                   []byte
+	ftpCmdType                  string
+	ftpState                    uint8
+	ftpResult                   []byte
+	ftpLocalDigest              string
+	ftpReqChan                  chan *ftpCommand
+	ftpResChan                  chan *ftpResult
+	ftpLoopEnd                  chan bool
 }
 
 // NewAdaptor returns a new Adaptor given a name and uuid
@@ -95,6 +115,10 @@ func NewAdaptor(name string, uuid string) *Adaptor {
 		driveParam: make([]*driveParam, 0, 0),
 		emergencyLoopChan: make(chan bool),
 		emergencyLoopEnd: make(chan bool),
+		ftpBuffer: make([]byte, 0, 0),
+		ftpReqChan: make(chan *ftpCommand),
+		ftpResChan: make(chan *ftpResult),
+		ftpLoopEnd: make(chan bool),
 	}
 	a.seq[0xfa0a] = 0
 	a.seq[0xfa0b] = 0
@@ -222,6 +246,49 @@ func (b *Adaptor) TakePicture() error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil, 6)
 }
 
+// TODO
+//   flat trim
+//   cut out mode switch     CutOutModeChanged 02-0b-02
+//   user emergency
+//   headlight animation HEADLIGHTS_FLASH,  HEADLIGHTS_BLINK
+//   current date 00-04-01 2016-04-26  (isofirmat)  CurrentDateChanged 00-05-04
+//   current time 00-04-01 T015736+0900 (isofirmat) CurrentTimeChanged 00-05-05
+//   all settings(retry) 00-02-00        ProductNameChanged 00-03-02  ProductSerialHighChanged 00-03-04  ProductSerialLowChanged 00-03-05 SupportedAccessoriesListChanged 00-1b(27)-00
+//                                ProductVersionChanged 00-03-03 AutoCountryChanged 00-03-07 CountryChanged 00-03-06 AccessoryConfigChanged  00-1b(27)-01 MaxHorizontalSpeedChanged 02-05-03
+//                                AllSettingsChanged 00-03-00
+//   AllStates(retry)    00-04-00  DeviceLibARCommandsVersion 00-12(18)-02 ProductModel 00-05-09 HeadlightsState 00-23-00 AnimationsStateList 00-19(25)-00 ChargingInfo 00-1d(29)-03
+//                                 MassStorageStateListChanged 00-05-02
+
+func (b *Adaptor) FTPList(path string) ([]byte, error) {
+	ftpCmd := &ftpCommand {
+		cmd: "LIS",
+		path: path,
+	}
+	b.ftpReqChan <- ftpCmd
+	fr := <-b.ftpResChan
+	return fr.result, fr.err
+}
+
+func (b *Adaptor) FTPGet(path string) ([]byte, error) {
+	ftpCmd := &ftpCommand {
+		cmd: "GET",
+		path: path,
+	}
+	b.ftpReqChan <- ftpCmd
+	fr := <-b.ftpResChan
+	return fr.result, fr.err
+}
+
+func (b *Adaptor) FTPDelete(path string) ([]byte, error) {
+	ftpCmd := &ftpCommand {
+		cmd: "DEL",
+		path: path,
+	}
+	b.ftpReqChan <- ftpCmd
+	fr := <-b.ftpResChan
+	return fr.result, fr.err
+}
+
 func (b *Adaptor) GetBattery() uint8 {
         return b.battery
 }
@@ -287,6 +354,26 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	return nil
 }
 
+func (b *Adaptor) ftpWriteCharBase(srvid string, charid string, data []byte, size int) error {
+	var ok bool
+	var bles *BLEService
+	var blec *BLECharacteristic
+	bles, ok = b.services[srvid]
+	if !ok {
+		return errors.New("not found service")
+	}
+	blec, ok = bles.characteristics[charid]
+	if !ok {
+		return errors.New("not found characteristic")
+	}
+	//--- debug ---
+	fmt.Printf("char = %s, write = %02x\n", blec.uuid, data[:size])
+	if err := b.peripheral.WriteCharacteristic(blec.characteristic, data[:size], true); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (b *Adaptor) takeDriveParam(lastDP *driveParam) *driveParam {
 	b.driveParamMutex.Lock()
 	defer b.driveParamMutex.Unlock()
@@ -312,6 +399,7 @@ func (b *Adaptor) appendDriveParam(driveParam *driveParam) {
 }
 
 func (b *Adaptor) driveLoop() {
+	var skipcnt int = 0
 	dp := &driveParam{
 		pcmd: true,
 	}
@@ -323,10 +411,21 @@ func (b *Adaptor) driveLoop() {
 		case t := <-ticker.C:
 			dp = b.takeDriveParam(dp)
 			if dp == nil {
-				continue;
+				skipcnt += 1
+				if (skipcnt == 6) {
+					dp = &driveParam{
+						pcmd: true,
+					}
+					skipcnt = 0
+				} else {
+					continue;
+				}
+			} else {
+				skipcnt = 0
 			}
 			if dp.pcmd {
-				fmt.Printf(">>> %v\n", dp)
+				// --- debug ---
+				//fmt.Printf(">>> %v\n", dp)
 				millisec := uint32(t.Sub(start).Seconds() * 1000)
 				data := make([]byte, 9, 9)
 				data[0] = byte(dp.flag)
@@ -359,10 +458,72 @@ func (b *Adaptor) emergencyLoop() {
 	}
 }
 
+func (b *Adaptor) ftpLoop() {
+	loop:
+	for {
+		select {
+		case ftpCmd := <-b.ftpReqChan:
+			b.ftpCmdType = ftpCmd.cmd
+			all := []byte(ftpCmd.cmd)
+			if ftpCmd.cmd == "MD5 OK" {
+				all = append(all, 0x00)
+				if err := b.ftpWriteCharBase("9a66fd210800919111e4012d1540cb8e", "9a66fd230800919111e4012d1540cb8e", all[0:7], 7); err != nil {
+					fr := &ftpResult {
+						err: errors.New("ftp command error"),
+					}
+					b.ftpResChan <- fr
+				}
+			} else {
+				all = append(all, ftpCmd.path...)
+				all = append(all, 0x00)
+				partial := make([]byte, 20, 20)
+				var sndcnt = 0
+				var seq uint8
+				var wsize int
+				for  {
+					l := len(all)
+					if l == 0 {
+						break
+					}
+					if l > 19 {
+						wsize = 19
+					} else {
+						wsize = l
+					}
+					copy(partial[1:1 + wsize], all[0:wsize])
+					all = all[wsize:]
+					rl := len(all)
+					if rl == 0 && sndcnt == 0 {
+						seq = 3
+					} else if rl > 0 && wsize == 19 && sndcnt == 0 {
+						seq = 2
+					} else if rl > 0 && wsize == 19 && sndcnt > 0 {
+						seq = 0
+					} else if wsize < 19 {
+						seq = 1
+					}
+					partial[0] = seq
+					if err := b.ftpWriteCharBase("9a66fd210800919111e4012d1540cb8e", "9a66fd240800919111e4012d1540cb8e", partial[0:1 + wsize], 1 + wsize); err != nil {
+						fr := &ftpResult {
+							err: errors.New("ftp command error"),
+						}
+						b.ftpResChan <- fr
+						break
+					}
+					sndcnt += 1
+				}
+			}
+		case <-b.ftpLoopEnd:
+			break loop
+		}
+	}
+}
+
 // start drive
 func (b *Adaptor) startDrive() {
 	go b.driveLoop()
 	go b.emergencyLoop()
+	go b.ftpLoop()
 }
 
 // Reconnect attempts to reconnect to the BLE peripheral. If it has an active connection
@@ -379,6 +540,7 @@ func (b *Adaptor) Reconnect() (errs []error) {
 func (b *Adaptor) Disconnect() (errs []error) {
 	b.driveLoopEnd <- true
 	b.emergencyLoopEnd <- true
+	b.ftpLoopEnd <- true
 	b.peripheral.Device().CancelConnection(b.peripheral)
 	return
 }
@@ -549,6 +711,15 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 		switch reqprjid {
 		case 0: // common
 			switch reqclsid {
+			case 1:
+				switch reqcmdid {
+				case 0:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.disconnectionCause)
+					fmt.Printf("Disconnection case = %d\n", b.disconnectionCause)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
 			default:
 				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
 				fmt.Printf("%02x\n", data)
@@ -696,7 +867,7 @@ func (b *Adaptor) discoveryService() error {
 	for _, s := range ss {
 		b.services[s.UUID().String()] = NewBLEService(s.UUID().String(), s)
 		fmt.Printf("\t%s\n", s.UUID().String())
-		fmt.Println("\tdiscoveryService")
+		fmt.Println("\tdiscoveryCharacteristic")
 		cs, err := b.peripheral.DiscoverCharacteristics(nil, s)
 		if err != nil {
 			fmt.Printf("Failed to discover characteristics, err: %s\n", err)
@@ -705,7 +876,7 @@ func (b *Adaptor) discoveryService() error {
 		for _, c := range cs {
 			b.services[s.UUID().String()].characteristics[c.UUID().String()] = NewBLECharacteristic(c.UUID().String(), c)
 			fmt.Printf("\t\t%s\n", c.UUID().String())
-			fmt.Println("\t\tdiscoveryDescripto")
+			fmt.Println("\t\tdiscoveryDescriptor")
 			ds, err := b.peripheral.DiscoverDescriptors(nil, c)
 			if err != nil {
 				fmt.Printf("Failed to discover discriptors, err: %s\n", err)
@@ -771,8 +942,139 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				fmt.Println("-FTP DATA fd23-")
+				//fmt.Println("-FTP DATA fd23-")
 				fmt.Printf("%02x\n", data)
+				if b.ftpCmdType == "LIS" || b.ftpCmdType == "DEL"  {
+					if b.ftpState == 0 && data[0] == 3 && len(data) > 1 {
+						msg := string(data[1:])
+						if strings.HasPrefix(msg, "error") {
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpCmdType = ""
+							fr := &ftpResult {
+								err: errors.New(string(data[1:len(data) - 1])),
+							}
+							b.ftpResChan <- fr
+						} else if strings.HasPrefix(msg, "Delete successful") {
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpCmdType = ""
+							fr := &ftpResult {
+								result: data[1:len(data) - 1],
+							}
+							b.ftpResChan <- fr
+						} else if strings.HasPrefix(msg, "End of Transfer") {
+							b.ftpResult = b.ftpBuffer
+							b.ftpBuffer = make([]byte, 0, len(b.ftpResult))
+							b.ftpState = 1
+							b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpResult))
+						} else {
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpCmdType = ""
+							fr := &ftpResult {
+								err: errors.New(fmt.Sprintf("unexpected message (%s)\n", msg)),
+							}
+							b.ftpResChan <- fr
+						}
+					} else if b.ftpState == 0 {
+						b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+					} else if b.ftpState == 1 {
+						b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+						if data[0] == 1 {
+							ftpRemoteDigest := string(b.ftpBuffer)
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpState = 0
+							b.ftpCmdType = ""
+							if (b.ftpLocalDigest != ftpRemoteDigest) {
+								fr := &ftpResult {
+									err: errors.New(fmt.Sprintf("error digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
+								}
+								b.ftpResChan <- fr
+							} else {
+								fr := &ftpResult {
+									result: b.ftpResult,
+								}
+								b.ftpResChan <- fr
+							}
+						}
+					}
+				} else if b.ftpCmdType == "GET" || b.ftpCmdType == "MD5 OK" {
+					if data[0] == 2 && b.ftpState == 0 {
+						msg := string(data[1:])
+						if strings.HasPrefix(msg, "MD5") {
+							b.ftpResult = b.ftpBuffer
+							b.ftpBuffer = make([]byte, 0, len(b.ftpResult))
+							b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+							b.ftpState = 1
+							b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum([]byte(b.ftpResult)))
+						} else {
+							b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+						}
+					} else if b.ftpState == 0 {
+						b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+					} else if b.ftpState == 1 {
+						b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+						ftpRemoteDigest := string(b.ftpBuffer)[3:]
+						b.ftpBuffer = b.ftpBuffer[:0]
+						if (b.ftpLocalDigest != ftpRemoteDigest) {
+							b.ftpState = 0
+							b.ftpCmdType = ""
+							fr := &ftpResult {
+								err: errors.New(fmt.Sprintf("error digest mismatch1 (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
+							}
+							b.ftpResChan <- fr
+						} else {
+							b.ftpState = 2
+							ftpCmd := &ftpCommand {
+								cmd: "MD5 OK",
+							}
+							b.ftpReqChan <- ftpCmd
+						}
+					} else if b.ftpState == 2 {
+						if data[0] != 3 {
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpState = 0
+							b.ftpCmdType = ""
+							fr := &ftpResult {
+								err: errors.New(fmt.Sprintf("unexpected message type (%d)\n", data[0])),
+							}
+							b.ftpResChan <- fr
+						} else {
+							msg := string(data[1:])
+							if strings.HasPrefix(msg, "End of Transfer") {
+								b.ftpBuffer = b.ftpBuffer[:0]
+								b.ftpState = 3
+							} else {
+								b.ftpBuffer = b.ftpBuffer[:0]
+								b.ftpState = 0
+								b.ftpCmdType = ""
+								fr := &ftpResult {
+									err: errors.New(fmt.Sprintf("unexpected message (%s)\n", msg)),
+									result: b.ftpResult,
+								}
+								b.ftpResChan <- fr
+							}
+						}
+					} else if b.ftpState == 3 {
+						b.ftpBuffer = append(b.ftpBuffer, data[1:]...)
+						if data[0] == 1 {
+							ftpRemoteDigest := string(b.ftpBuffer)
+							b.ftpBuffer = b.ftpBuffer[:0]
+							b.ftpState = 0
+							b.ftpCmdType = ""
+							if (b.ftpLocalDigest != ftpRemoteDigest) {
+								fr := &ftpResult {
+									err: errors.New(fmt.Sprintf("error digest mismatch2 (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
+									result: b.ftpResult,
+								}
+								b.ftpResChan <- fr
+							} else {
+								fr := &ftpResult {
+									result: b.ftpResult,
+								}
+								b.ftpResChan <- fr
+							}
+						}
+					}
+				}
 			}); err != nil {
 				fmt.Println(err)
 			}

@@ -116,6 +116,21 @@ func (a *AirborneDroneDriver) TakePicture() error {
 	return a.adaptor().drone.TakePicture()
 }
 
+// FTPList ftp list
+func (a *AirborneDroneDriver) FTPList(path string) ([]byte, error) {
+	return a.adaptor().drone.FTPList(path)
+}
+
+// FTPGet ftp list
+func (a *AirborneDroneDriver) FTPGet(path string) ([]byte, error) {
+	return a.adaptor().drone.FTPGet(path)
+}
+
+// FTPDelete ftp list
+func (a *AirborneDroneDriver) FTPDelete(path string) ([]byte, error) {
+	return a.adaptor().drone.FTPDelete(path)
+}
+
 // GetBattery return battery (0 - 100)
 func (a *AirborneDroneDriver) GetBattery() uint8 {
 	return a.adaptor().drone.GetBattery()

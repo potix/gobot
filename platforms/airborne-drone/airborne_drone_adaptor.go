@@ -24,6 +24,9 @@ type drone interface {
 	SetContinuousMode(onOff bool)
 	Headlight(left uint8, right uint8) error
 	TakePicture() error
+	FTPList(path string) ([]byte, error)
+	FTPGet(path string) ([]byte, error)
+	FTPDelete(path string) ([]byte, error)
 	GetBattery() uint8
 	GetFlyingState() uint32
 	GetPictureState() uint32

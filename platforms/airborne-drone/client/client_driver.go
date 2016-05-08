@@ -119,6 +119,18 @@ func (client *Client) TakePicture() error {
 	return client.adaptor.TakePicture()
 }
 
+func (client *Client) FTPList(path string) ([]byte, error) {
+	return client.adaptor.FTPList(path)
+}
+
+func (client *Client) FTPGet(path string) ([]byte, error) {
+	return client.adaptor.FTPGet(path)
+}
+
+func (client *Client) FTPDelete(path string) ([]byte, error) {
+	return client.adaptor.FTPDelete(path)
+}
+
 func (client *Client) GetBattery() uint8 {
 	return client.adaptor.GetBattery()
 }
