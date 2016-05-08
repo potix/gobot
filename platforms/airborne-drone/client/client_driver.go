@@ -111,8 +111,32 @@ func (client *Client) SetContinuousMode(onOff bool) {
 	client.adaptor.SetContinuousMode(onOff)
 }
 
+func (client *Client) SetCutOutMode(onOff bool) error {
+	return client.adaptor.SetCutOutMode(onOff)
+}
+
+func (client *Client) FlatTrim() error {
+	return client.adaptor.FlatTrim()
+}
+
+func (client *Client) Emergency() error {
+	return client.adaptor.Emergency()
+}
+
 func (client *Client) Headlight(left uint8, right uint8) error {
 	return client.adaptor.Headlight(left, right)
+}
+
+func (client *Client) HeadlightFlash() error {
+	return client.adaptor.HeadlightFlash()
+}
+
+func (client *Client) HeadlightBlink() error {
+	return client.adaptor.HeadlightBlink()
+}
+
+func (client *Client) HeadlightOscillation() error {
+	return client.adaptor.HeadlightOscillation()
 }
 
 func (client *Client) TakePicture() error {
@@ -278,8 +302,38 @@ func (cmd *Commander) ContinuousMode(onOff bool) *Commander {
 	return cmd
 }
 
+func (cmd *Commander) CutOutMode(onOff bool) *Commander {
+        cmd.client.adaptor.SetCutOutMode(onOff)
+	return cmd
+}
+
+func (cmd *Commander) FlatTrim() *Commander {
+        cmd.client.adaptor.FlatTrim()
+	return cmd
+}
+
+func (cmd *Commander) Emergency() *Commander {
+        cmd.client.adaptor.Emergency()
+	return cmd
+}
+
 func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
 	cmd.client.adaptor.Headlight(left, right)
+	return cmd
+}
+
+func (cmd *Commander) HeadlightFlash() *Commander {
+	cmd.client.adaptor.HeadlightFlash()
+	return cmd
+}
+
+func (cmd *Commander) HeadlightBlink() *Commander {
+	cmd.client.adaptor.HeadlightBlink()
+	return cmd
+}
+
+func (cmd *Commander) HeadlightOscillation() *Commander {
+	cmd.client.adaptor.HeadlightOscillation()
 	return cmd
 }
 

@@ -79,8 +79,15 @@ type Adaptor struct {
 	maxRotationSpeedCurrent     float32
 	maxRotationSpeedMin         float32
 	maxRotationSpeedMax         float32
+	currentDate                 string
+	currentTime                 string
 	headlightLeft               uint8
 	headlightRight              uint8
+	cutOutMode                  bool
+	chargingPhase               uint32
+	chargingRate                uint32
+	chargeIntensity             uint8
+	chargeFullChargingTime      uint8
 	pictureStateV2	            uint32
 	pictureStateV2Error         uint32
 	pictureStateV1              uint8
@@ -188,6 +195,32 @@ func (b *Adaptor) Connect() (errs []error) {
 		return errs
 	}
 
+
+	now := time.Now()
+	data := make([]byte, 0, 0)
+
+	// set current date
+	data = append(data, []byte(fmt.Sprintf("%02d-%02d-%02d", now.Year(), now.Month(), now.Day()))...)
+	data = append(data, 0x00)
+        b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x01, data)
+
+	// set current time
+	var pn  string
+	data = data[:0]
+	_, offset := now.Zone()
+	if offset > 0 {
+		pn = "+"
+	} else if offset < 0 {
+		pn = "-"
+	}
+	if offset == 0 {
+		data = append(data, []byte(fmt.Sprintf("T%02d%02d%02dZ", now.Hour(), now.Minute(), now.Second()))...)
+	} else {
+		data = append(data, []byte(fmt.Sprintf("T%02d%02d%02d%s%02d%02d", now.Hour(), now.Minute(), now.Second(), pn, offset / 3600, (offset % 3600) / 60))...)
+	}
+	data = append(data, 0x00)
+        b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x04, 0x02, data)
+
 	// start drive
 	b.startDrive()
 
@@ -195,62 +228,95 @@ func (b *Adaptor) Connect() (errs []error) {
 }
 
 func (b *Adaptor) TakeOff() error {
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x01, nil, 6)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x01, nil)
 }
 
 func (b *Adaptor) Landing() error {
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x03, nil, 6)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x00, 0x03, nil)
 }
 
 func (b *Adaptor) Flip(value uint32) error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], value)
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x04, 0x00, data, 10)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x04, 0x00, data)
 }
 
 func (b *Adaptor) SetMaxAltitude(altitude float32) error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(altitude))
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x00, data, 10)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x00, data)
 }
 
 func (b *Adaptor) SetMaxTilt(tilt float32) error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(tilt))
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x01, data, 10)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x08, 0x01, data)
 }
 
 func (b *Adaptor) SetMaxVirticalSpeed(virticalSpeed float32) error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(virticalSpeed))
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x00, data, 10)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x00, data)
 }
 
 func (b *Adaptor) SetMaxRotationSpeed(rotationSpeed float32) error {
 	data := make([]byte, 4, 4)
 	binary.LittleEndian.PutUint32(data[0:4], math.Float32bits(rotationSpeed))
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x01, data, 10)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x01, 0x01, data)
+}
+
+func (b *Adaptor) SetCutOutMode(onOff bool) error {
+	data := make([]byte, 1, 1)
+	if onOff {
+		data[0] = 1
+	} else {
+		data[0] = 0
+	}
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0xa, 0x00, data)
+}
+
+func (b *Adaptor) FlatTrim() error {
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x0, 0x00, nil)
+}
+
+func (b *Adaptor) Emergency() error {
+	// TODO retry... ummmm
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0c0800919111e4012d1540cb8e", 0x04, 0xfa0c, 0x02, 0x0, 0x04, nil)
 }
 
 func (b *Adaptor) Headlight(left uint8, right uint8) error {
 	data := make([]byte, 2, 2)
 	data[0] = left
 	data[1] = right
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x16, 0x00, data, 8)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x16, 0x00, data)
+}
+
+func (b *Adaptor) HeadlightFlash() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 0)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
+}
+
+func (b *Adaptor) HeadlightBlink() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 1)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
+}
+
+func (b *Adaptor) HeadlightOscillation() error {
+	data := make([]byte, 4, 4)
+	binary.LittleEndian.PutUint32(data[0:4], 2)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x00, 0x18, 0x00, data)
 }
 
 func (b *Adaptor) TakePicture() error {
 	if (b.pictureStateV2 != 0) {
 		return errors.New("Now it is't possible to take a picture ")
 	}
-        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil, 6)
+        return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil)
 }
 
 // TODO
-//   flat trim
-//   cut out mode switch     CutOutModeChanged 02-0b-02
-//   user emergency
-//   headlight animation HEADLIGHTS_FLASH,  HEADLIGHTS_BLINK
 //   current date 00-04-01 2016-04-26  (isofirmat)  CurrentDateChanged 00-05-04
 //   current time 00-04-01 T015736+0900 (isofirmat) CurrentTimeChanged 00-05-05
 //   all settings(retry) 00-02-00        ProductNameChanged 00-03-02  ProductSerialHighChanged 00-03-04  ProductSerialLowChanged 00-03-05 SupportedAccessoriesListChanged 00-1b(27)-00
@@ -321,7 +387,7 @@ func (b *Adaptor) SetContinuousMode(continuousMode bool) {
 	b.continuousMode = continuousMode
 }
 
-func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte, size int) error {
+func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte) error {
 	var ok bool
 	var bles *BLEService
 	var blec *BLECharacteristic
@@ -333,7 +399,8 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	if !ok {
 		return errors.New("not found characteristic")
 	}
-	value := make([]byte, 6, size)
+	var hdrSize int = 6
+	value := make([]byte, hdrSize, hdrSize + len(data))
         b.seqMutex.Lock()
 	seq := b.seq[seqid]
 	b.seq[seqid] += 1
@@ -348,7 +415,7 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	}
 	//--- debug ---
 	// fmt.Printf("char = %s, write = %02x\n", blec.uuid, value[:size])
-	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value[:size], true); err != nil {
+	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value, true); err != nil {
 		return err
 	}
 	return nil
@@ -434,7 +501,7 @@ func (b *Adaptor) driveLoop() {
 				data[3] = byte(dp.yaw)
 				data[4] = byte(dp.gaz)
 				binary.LittleEndian.PutUint32(data[5:9], millisec)
-				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x02, data[0:9], 15)
+				err := b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0a0800919111e4012d1540cb8e", 0x02, 0xfa0a, 0x02, 0x00, 0x02, data)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -680,6 +747,33 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
 				}
+			case 25:
+				switch reqcmdid {
+				case 0:
+					var animationList uint32
+					var animationRate uint32
+					var animationError uint32
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &animationList)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &animationRate)
+					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &animationError)
+					fmt.Printf("AnimationsState list = %d, rate = %d, error = %d\n", animationList, animationRate, animationError)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 29:
+				switch reqcmdid {
+				case 3:
+					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.chargingPhase)
+					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.chargingRate)
+					b.chargeIntensity = data[14]
+					b.chargeFullChargingTime = data[15]
+					fmt.Printf("ChargingInfo phase= %d, rate = %d, intensity = %d, fullChargeTime = %d\n",
+					    b.chargingPhase, b.chargingRate, b.chargeIntensity, b.chargeFullChargingTime)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
 			default:
 				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
 				fmt.Printf("%02x\n", data)
@@ -720,6 +814,18 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)
 				}
+			case 5:
+				switch reqcmdid {
+				case 4:
+					b.currentDate = string(data[6:len(data) - 1])
+					fmt.Printf("CurrentDateChanged date = %d\n", b.currentDate)
+				case 5:
+					b.currentTime = string(data[6:len(data) - 1])
+					fmt.Printf("CurrentTimeChanged time = %d\n", b.currentTime)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
 			default:
 				fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x)\n", reqprjid, reqclsid)
 				fmt.Printf("%02x\n", data)
@@ -739,6 +845,7 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 			case 3:
 				switch reqcmdid {
 				case 0:
+					// FlatTrimChanged
 					fmt.Printf("FlatTrimChanged\n")
 				case 1:
 					binary.Read(bytes.NewReader(data[6:10]), binary.LittleEndian, &b.flyingState)
@@ -798,6 +905,19 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 					binary.Read(bytes.NewReader(data[10:14]), binary.LittleEndian, &b.maxTiltMin)
 					binary.Read(bytes.NewReader(data[14:18]), binary.LittleEndian, &b.maxTiltMax)
 					fmt.Printf("MaxTilitChanged current = %f, min = %f, max = %f\n", b.maxTiltCurrent, b.maxTiltMin, b.maxTiltMax)
+				default:
+					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
+					fmt.Printf("%02x\n", data)
+				}
+			case 11:
+				switch reqcmdid {
+				case 2:
+					if data[6] == 1 {
+						b.cutOutMode = true
+					} else {
+						b.cutOutMode = false
+					}
+					fmt.Printf("CutOutModeChanged = %d\n", b.cutOutMode)
 				default:
 					fmt.Printf("unexpected class id (unknown reqclsid %02x-%02x-%02x)\n", reqprjid, reqclsid, reqcmdid)
 					fmt.Printf("%02x\n", data)

@@ -106,9 +106,39 @@ func (a *AirborneDroneDriver) SetContinuousMode(onOff bool) {
 	a.adaptor().drone.SetContinuousMode(onOff)
 }
 
-// Headlight causes the drone to headlight (0-2255)
+// SetCutOutMode causes the drone to SetCutOutMode
+func (a *AirborneDroneDriver) SetCutOutMode(onOff bool) error {
+	return a.adaptor().drone.SetCutOutMode(onOff)
+}
+
+// FlatTrim causes the drone to FlatTrim
+func (a *AirborneDroneDriver) FlatTrim() error {
+	return a.adaptor().drone.FlatTrim()
+}
+
+// Emergency causes the drone to Emergency
+func (a *AirborneDroneDriver) Emergency() error {
+	return a.adaptor().drone.Emergency()
+}
+
+// Headlight causes the drone to headlight (0-255)
 func (a *AirborneDroneDriver) Headlight(left uint8, right uint8) error {
 	return a.adaptor().drone.Headlight(left, right)
+}
+
+// HeadlightFlash causes the drone to headlight flash 
+func (a *AirborneDroneDriver) HeadlightFlash() error {
+	return a.adaptor().drone.HeadlightFlash()
+}
+
+// HeadlightBlink causes the drone to headlight blink
+func (a *AirborneDroneDriver) HeadlightBlink() error {
+	return a.adaptor().drone.HeadlightBlink()
+}
+
+// HeadlightOscillation causes the drone to headlight oscillation
+func (a *AirborneDroneDriver) HeadlightOscillation() error {
+	return a.adaptor().drone.HeadlightOscillation()
 }
 
 // TakePicture causes the drone to take picture

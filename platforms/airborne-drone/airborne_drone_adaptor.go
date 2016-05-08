@@ -22,7 +22,13 @@ type drone interface {
 	SetMaxVirticalSpeed(virticalSpeed float32) error
 	SetMaxRotationSpeed(rotationSpeed float32) error
 	SetContinuousMode(onOff bool)
+	SetCutOutMode(onOff bool) error
+	FlatTrim() error
+	Emergency() error
 	Headlight(left uint8, right uint8) error
+	HeadlightFlash() error
+	HeadlightBlink() error
+	HeadlightOscillation() error
 	TakePicture() error
 	FTPList(path string) ([]byte, error)
 	FTPGet(path string) ([]byte, error)

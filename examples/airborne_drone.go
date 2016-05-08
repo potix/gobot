@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	_"fmt"
 	"time"
 
 	"github.com/potix/gobot"
@@ -15,6 +15,16 @@ func main() {
 	drone := airbornedrone.NewAirborneDroneDriver(airborneDroneAdaptor, "swat")
 
 	work := func() {
+		gobot.On(drone.Event("flying"), func(data interface{}) {
+			gobot.After(3*time.Second, func() {
+				cmd := drone.NewCommander()
+				time.Sleep(time.Duration(2 * time.Second))
+				cmd.CutOutMode(false)
+				time.Sleep(time.Duration(2 * time.Second))
+				drone.Landing()
+			})
+		})
+		drone.TakeOff()
 /*
 		gobot.On(drone.Event("flying"), func(data interface{}) {
 			gobot.After(3*time.Second, func() {
@@ -85,8 +95,9 @@ func main() {
 		})
 		drone.TakeOff()
 */
-		//time.Sleep(time.Duration(3 * time.Second))
-		//drone.TakePicture()
+/*
+		time.Sleep(time.Duration(3 * time.Second))
+		drone.TakePicture()
 		time.Sleep(time.Duration(2 * time.Second))
 		var result []byte
 		var err error
@@ -100,6 +111,7 @@ func main() {
 		result, err = drone.FTPGet("/internal_000/Airborne_Night/academy/0907_1970-01-01T000320+0000_9F4FF6.pud")
 		fmt.Println(string(result), err)
 		time.Sleep(time.Duration(120 * time.Second))
+*/
 	}
 
 	robot := gobot.NewRobot("drone",
