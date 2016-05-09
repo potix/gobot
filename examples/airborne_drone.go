@@ -1,7 +1,7 @@
 package main
 
 import (
-	_"fmt"
+	"fmt"
 	"time"
 
 	"github.com/potix/gobot"
@@ -103,10 +103,8 @@ func main() {
 		})
 		drone.TakeOff()
 */
-/*
+
 		time.Sleep(time.Duration(3 * time.Second))
-		drone.TakePicture()
-		time.Sleep(time.Duration(2 * time.Second))
 		var result []byte
 		var err error
 		fmt.Println("ftpCntrl")
@@ -118,10 +116,37 @@ func main() {
 		time.Sleep(time.Duration(1 * time.Second))
 		result, err = drone.FTPGet("/internal_000/Airborne_Night/academy/0907_1970-01-01T000320+0000_9F4FF6.pud")
 		fmt.Println(string(result), err)
+		result, err = drone.FTPGet("/internal_000/Airborne_Night/media/Airborne_Night_1970-01-01T000544+0000_.jpg")
+		fmt.Println(string(result), err)
+		time.Sleep(time.Duration(240 * time.Second))
+/*
+		drone.SetAutoDownloadMode(true)
+		time.Sleep(time.Duration(3 * time.Second))
+		drone.TakePicture()
+		time.Sleep(time.Duration(3 * time.Second))
+		drone.HeadlightBlinkStart()
+		time.Sleep(time.Duration(3 * time.Second))
+		drone.HeadlightBlinkStop()
+		time.Sleep(time.Duration(600 * time.Second))
+*/
+/*
+		var result []byte
+		var err error
+		time.Sleep(time.Duration(5 * time.Second))
+		fmt.Println("=====")
+		result, err = drone.FTPList("/internal_000/Airborne_Night/media/")
+		fmt.Println(string(result), err)
+		time.Sleep(time.Duration(5 * time.Second))
+		fmt.Println("=====")
+		result, err = drone.FTPList("/internal_000/Airborne_Night/academy/")
+		fmt.Println(string(result), err)
+		time.Sleep(time.Duration(5 * time.Second))
+		fmt.Println("=====")
+		result, err = drone.FTPList("/internal_000/Airborne_Night/thumb/")
+		fmt.Println(string(result), err)
+		time.Sleep(time.Duration(5 * time.Second))
 		time.Sleep(time.Duration(120 * time.Second))
 */
-		drone.SetAutoDownloadMode(true)
-		time.Sleep(time.Duration(120 * time.Second))
 	}
 
 	robot := gobot.NewRobot("drone",
