@@ -11,7 +11,7 @@ import (
         "errors"
         "bytes"
         "regexp"
-        "ioutil"
+        "io/ioutil"
         "crypto/md5"
 	"encoding/binary"
 
@@ -405,7 +405,7 @@ func (b *Adaptor) TakePicture() error {
 func (b *Adaptor) ftpCmdBase(ftpCmd *ftpCommand) ([]byte, error) {
 	b.ftpReqChan <- ftpCmd
 	select {
-	case fr := <-b.ftpResChan
+	case fr := <-b.ftpResChan:
 		return fr.result, fr.err
 	case <-time.After(FTPTimeout * time.Second):
 		return nil, errors.New("ftp cmd timeout")
@@ -674,26 +674,25 @@ func (b *Adaptor) ftpLoop() {
 }
 
 func (b *Adaptor) autoDownloadLoop() {
-	var failcnt int = 0
 	var result []byte
 	var err error
 	var rpath string
 	var rs string
-	for {
+	var ln string
+	for i := 0; i < 3; i++ {
 		result, err = b.FTPList("/internal_000")
 		if err == nil {
 			break
 		}
-		failcnt += 1
-		if failcnt > 2 {
-			fmt.Println("could not start auto download (not found /internal_000)")
-			return
-		}
+	}
+	if result == nil {
+		fmt.Println("could not start auto download (not found /internal_000)")
+		return
 	}
 	rs = string(result)
-	for _, s = range strings.Split(s, "\n") {
-		re:= regexp.MustCompile("^[^ \t]+[ \t]+[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+(Airborne[^ \t\n]+)")
-		group := re.FindStringSubmatch(s)
+	for _, ln = range strings.Split(rs, "\n") {
+		re:= regexp.MustCompile(`^\S+\s+\d+\s+\S+\s+\S+\s+\d+\s+\d+\s+\d+\s+\d+\s+(Airborne\S*)`)
+		group := re.FindStringSubmatch(ln)
 		if len(group) > 1 {
 			rpath = fmt.Sprintf("/internal_000/%s", group[1])
 			break
@@ -719,55 +718,49 @@ func (b *Adaptor) autoDownloadLoop() {
 			if !m {
 				continue
 			}
-			failcnt = 0
-			for {
+			for i := 0; i < 3; i++ {
 				result, err = b.FTPList(rpath)
 				if err == nil {
 					break
 				}
-				failcnt += 1
-				if failcnt > 2 {
-					fmt.Println("give up ftp list")
-					break next
-				}
+			}
+			if result == nil {
+				fmt.Println("give up ftp list")
+				break next
 			}
 			rs = string(result)
-			for _, s = range strings.Split(s, "\n") {
-				re:= regexp.MustCompile("^[^ \t]+[ \t]+[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+([^ \t]+\.pud)")
-				group := re.FindStringSubmatch(s)
+			for _, ln = range strings.Split(rs, "\n") {
+				re:= regexp.MustCompile(`^\S+\s+\d+\s+\S+\s+\S+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\S+\.pud)`)
+				group := re.FindStringSubmatch(ln)
 				if len(group) < 2 {
 					continue
 				}
 				rfpath := fmt.Sprintf("%s/%s", rpath, group[1])
-				failcnt = 0
-				cont:
-				for {
+				for i := 0; i < 3; i++ {
 					result, err = b.FTPGet(rfpath)
 					if err == nil {
 						break
 					}
-					failcnt += 1
-					if failcnt > 2 {
-						fmt.Println("give up ftp get")
-						break cont
-					}
 				}
-				lfprefix := time.Now().UNIX()
+				if result == nil {
+					fmt.Println("give up ftp get")
+					continue
+				}
+				lfprefix := time.Now().Unix()
 				lfpath := fmt.Sprintf("%s/%d_%s" , b.downloadPath, lfprefix, group[1])
 				if err := ioutil.WriteFile(lfpath, result, 0644); err != nil {
 					fmt.Println("could not write file")
 					continue
 				}
-				for {
+				for i := 0; i < 3; i++ {
 					result, err = b.FTPDelete(rfpath)
 					if err == nil {
 						break
 					}
-					failcnt += 1
-					if failcnt > 2 {
-						fmt.Println("give up ftp delete")
-						break cont
-					}
+				}
+				if result == nil {
+					fmt.Println("give up ftp delete")
+					continue
 				}
 			}
 		case <-b.autoDownloadEnd:
