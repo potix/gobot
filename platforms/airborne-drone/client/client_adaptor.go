@@ -22,7 +22,7 @@ import (
 
 // drive tick times (millisecond)
 const DriveTick = 25
-const FTPTimeout = 60
+const FTPTimeout = 300
 
 // TODO: handle other OS defaults besides Linux
 var DefaultClientOptions = []gatt.Option{
@@ -404,6 +404,7 @@ func (b *Adaptor) TakePicture() error {
 }
 
 func (b *Adaptor) ftpCmdBase(ftpCmd *ftpCommand) ([]byte, error) {
+	fmt.Printf("FTP: %s%s\n", ftpCmd.cmd, ftpCmd.path)
 	b.ftpBufferAll = b.ftpBufferAll[:0]
 	b.ftpBufferChunk = b.ftpBufferChunk[:0]
 	b.ftpCmdType = ""
@@ -526,7 +527,7 @@ func (b *Adaptor) ftpWriteCharBase(srvid string, charid string, data []byte, siz
 		return errors.New("not found characteristic")
 	}
 	//--- debug ---
-	fmt.Printf("char = %s, write = %02x\n", blec.uuid, data[:size])
+	//fmt.Printf("char = %s, write = %02x\n", blec.uuid, data[:size])
 	if err := b.peripheral.WriteCharacteristic(blec.characteristic, data[:size], true); err != nil {
 		return err
 	}
@@ -706,12 +707,11 @@ func (b *Adaptor) autoDownloadLoop() {
 		fmt.Println("could not start auto download (not found /internal_000/Airborn*)")
 		return
 	}
-	fmt.Printf("remote path = %s\n", rpath)
+	fmt.Printf("remote base path = %s\n", rpath)
 	tpl := [...]string{ "media", "academy", "thumb" }
 	for _, tp := range tpl {
 		lp := fmt.Sprintf("%s/%s/", b.downloadPath, tp)
-		// -- debug --
-		fmt.Println(lp)
+		fmt.Printf("local path = %s\n", lp)
 		if err = os.MkdirAll(lp, 0755); err != nil {
 			fmt.Printf("could not start auto download (could not creat local path %s)\n", lp)
 			return
@@ -730,8 +730,7 @@ func (b *Adaptor) autoDownloadLoop() {
 			}
 			for _, tp := range tpl {
 				rp := fmt.Sprintf("%s/%s/", rpath, tp)
-				// -- debug --
-				fmt.Println(rp)
+				fmt.Println("remote path = %s\n", rp)
 				for i := 0; i < 3; i++ {
 					result, err = b.FTPList(rp)
 					if err == nil {
@@ -744,10 +743,10 @@ func (b *Adaptor) autoDownloadLoop() {
 				}
 				rs = string(result)
 				// -- debug --
-				fmt.Println(rs)
+				//fmt.Println(rs)
 				for _, ln := range strings.Split(rs, "\n") {
 					// -- debug --
-					fmt.Println(ln)
+					//fmt.Println(ln)
 					var re *regexp.Regexp
 					if tp == "academy" {
 						re = regexp.MustCompile(`^\S+\s+\d+\s+\S+\s+\S+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\S+\.pud)`)
@@ -760,7 +759,7 @@ func (b *Adaptor) autoDownloadLoop() {
 					}
 					rfpath := fmt.Sprintf("%s/%s", rp, group[1])
 					// -- debug --
-					fmt.Println(rfpath)
+					//fmt.Println(rfpath)
 					for i := 0; i < 3; i++ {
 						result, err = b.FTPGet(rfpath)
 						if err == nil {
@@ -773,8 +772,7 @@ func (b *Adaptor) autoDownloadLoop() {
 					}
 					lfprefix := time.Now().Unix()
 					lfpath := fmt.Sprintf("%s/%s/%d_%s" , b.downloadPath, tp, lfprefix, group[1])
-					// -- debug --
-					fmt.Println(lfpath)
+					fmt.Printf("write file = %s\n", lfpath)
 					if err := ioutil.WriteFile(lfpath, result, 0644); err != nil {
 						fmt.Println("could not write file")
 						continue
@@ -1384,163 +1382,105 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fd230800919111e4012d1540cb8e"]; ok {
 			// notify (ftp data transfer)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				//fmt.Println("-FTP DATA fd23-")
-				fmt.Printf("%02x\n", data)
-/*
-				if b.ftpCmdType == "LIS" || b.ftpCmdType == "DEL"  {
-					if b.ftpState == 0 && data[0] == 3 && len(data) > 1 {
-						msg := string(data[1:])
-						if strings.HasPrefix(msg, "error") {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpCmdType = ""
-							fr := &ftpResult {
-								err: errors.New(string(data[1:len(data) - 1])),
-							}
-							b.ftpResChan <- fr
-						} else if strings.HasPrefix(msg, "Delete successful") {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpCmdType = ""
-							fr := &ftpResult {
-								result: data[1:len(data) - 1],
-							}
-							b.ftpResChan <- fr
-						} else if strings.HasPrefix(msg, "End of Transfer") {
-							b.
-							b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpBufferChunk))
-							b.ftpBufferChunk = make([]byte, 0, len(b.ftpBufferChunk))
-							b.ftpState = 1
-						} else {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpCmdType = ""
-							fr := &ftpResult {
-								err: errors.New(fmt.Sprintf("unexpected message (%s)\n", msg)),
-							}
-							b.ftpResChan <- fr
-						}
-					} else if b.ftpState == 0 {
-						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-					} else if b.ftpState == 1 {
-						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-						if data[0] == 1 {
-							ftpRemoteDigest := string(b.ftpBufferChunk)
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpState = 0
-							b.ftpCmdType = ""
-							if (b.ftpLocalDigest != ftpRemoteDigest) {
-								fr := &ftpResult {
-									err: errors.New(fmt.Sprintf("error digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
-								}
-								b.ftpResChan <- fr
-							} else {
-								fr := &ftpResult {
-									result: b.ftpResult,
-								}
-								b.ftpResChan <- fr
-							}
-						}
-					}
-				} else if b.ftpCmdType == "GET" || b.ftpCmdType == "MD5 OK" || b.ftpCmdType == "CANCEL" {
-*/
-					if data[0] == 2 && b.ftpState == 0 { // GET 2 or 5. recv md5
-						msg := string(data[1:])
-						if strings.HasPrefix(msg, "MD5") {
-							b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpBufferChunk)) // compute digest
-							b.ftpBufferAll = append(b.ftpBufferAll, b.ftpBufferChunk...) // save toall buffer
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-							b.ftpState = 1
-						} else {
-							b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-						}
-					} else if data[0] == 3 && b.ftpState == 0 && len(data) > 1 { // GET 6. recv end transfer, LIST 2
-						msg := string(data[1:])
-						if strings.HasPrefix(msg, "error") {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpBufferAll = b.ftpBufferAll[:0]
-							b.ftpCmdType = ""
-							b.ftpState = 0
-							fr := &ftpResult {
-								err: errors.New(string(data[1:len(data) - 1])),
-							}
-							b.ftpResChan <- fr
-						} else if strings.HasPrefix(msg, "Delete successful") {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpBufferAll = b.ftpBufferAll[:0]
-							b.ftpCmdType = ""
-							b.ftpState = 0
-							fr := &ftpResult {
-								result: data[1:len(data) - 1],
-							}
-							b.ftpResChan <- fr
-						} else if strings.HasPrefix(msg, "End of Transfer") {
-							b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpBufferChunk)) // compute digest
-							b.ftpBufferAll = append(b.ftpBufferAll, b.ftpBufferChunk...) // save to all buffer
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpState = 2
-						} else {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpBufferAll = b.ftpBufferAll[:0]
-							b.ftpCmdType = ""
-							b.ftpState = 0
-							fr := &ftpResult {
-								err: errors.New(fmt.Sprintf("unexpected message (%s)\n", msg)),
-								result: b.ftpBufferAll,
-							}
-							b.ftpResChan <- fr
-						}
-					} else if b.ftpState == 0 { // GET 1 or 4. recv data,  LIST 1
-						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-					} else if b.ftpState == 1 { // GET 3. send MD5 OK or CANCEL
-						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-						ftpRemoteDigest := string(b.ftpBufferChunk)[3:]
+				if data[0] == 2 && b.ftpState == 0 { // GET 2 or 5. recv md5
+					msg := string(data[1:])
+					if strings.HasPrefix(msg, "MD5") {
+						b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpBufferChunk)) // compute digest
+						b.ftpBufferAll = append(b.ftpBufferAll, b.ftpBufferChunk...) // save toall buffer
 						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+						b.ftpState = 1
+					} else {
+						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+					}
+				} else if data[0] == 3 && b.ftpState == 0 && len(data) > 1 { // GET 6. recv end transfer, LIST 2
+					msg := string(data[1:])
+					if strings.HasPrefix(msg, "error") {
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpBufferAll = b.ftpBufferAll[:0]
+						b.ftpCmdType = ""
 						b.ftpState = 0
-						if (b.ftpLocalDigest != ftpRemoteDigest) {
-							fmt.Println(fmt.Sprintf("error digest mismatch (local %s, remote %s) [CANCEL]", b.ftpLocalDigest, ftpRemoteDigest))
-							ftpCmd := &ftpCommand {
-								cmd: "CANCEL",
-							}
-							b.ftpReqChan <- ftpCmd
-						} else {
-							ftpCmd := &ftpCommand {
-								cmd: "MD5 OK",
-							}
-							b.ftpReqChan <- ftpCmd
+						fr := &ftpResult {
+							err: errors.New(string(data[1:len(data) - 1])),
 						}
-					} else if b.ftpState == 2 { // GET 7. recv last digest, LIST 3
-						if data[0] == 2 {
-							b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-						} else if data[0] == 1 {
-							b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
-							ftpRemoteDigest := string(b.ftpBufferChunk)
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpCmdType = ""
-							b.ftpState = 0
-							if (b.ftpCmdType == "CANCEL" || b.ftpLocalDigest != ftpRemoteDigest) {
-								fr := &ftpResult {
-									err: errors.New(fmt.Sprintf("error digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
-									result: b.ftpBufferAll,
-								}
-								b.ftpResChan <- fr
-							} else {
-								fr := &ftpResult {
-									result: b.ftpBufferAll,
-								}
-								b.ftpResChan <- fr
-							}
-						} else {
-							b.ftpBufferChunk = b.ftpBufferChunk[:0]
-							b.ftpBufferAll = b.ftpBufferAll[:0]
-							b.ftpCmdType = ""
-							b.ftpState = 0
+						b.ftpResChan <- fr
+					} else if strings.HasPrefix(msg, "Delete successful") {
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpBufferAll = b.ftpBufferAll[:0]
+						b.ftpCmdType = ""
+						b.ftpState = 0
+						fr := &ftpResult {
+							result: data[1:len(data) - 1],
+						}
+						b.ftpResChan <- fr
+					} else if strings.HasPrefix(msg, "End of Transfer") {
+						b.ftpBufferAll = append(b.ftpBufferAll, b.ftpBufferChunk...) // save to all buffer
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpState = 2
+					} else {
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpBufferAll = b.ftpBufferAll[:0]
+						b.ftpCmdType = ""
+						b.ftpState = 0
+						fr := &ftpResult {
+							err: errors.New(fmt.Sprintf("unexpected message (%s)\n", msg)),
+							result: b.ftpBufferAll,
+						}
+						b.ftpResChan <- fr
+					}
+				} else if b.ftpState == 0 { // GET 1 or 4. recv data,  LIST 1
+					b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+				} else if b.ftpState == 1 { // GET 3. send MD5 OK or CANCEL
+					b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+					ftpRemoteDigest := string(b.ftpBufferChunk)[3:]
+					b.ftpBufferChunk = b.ftpBufferChunk[:0]
+					b.ftpState = 0
+					if (b.ftpLocalDigest != ftpRemoteDigest) {
+						fmt.Println(fmt.Sprintf("error chunk digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest))
+						ftpCmd := &ftpCommand {
+							cmd: "CANCEL",
+						}
+						b.ftpReqChan <- ftpCmd
+					} else {
+						ftpCmd := &ftpCommand {
+							cmd: "MD5 OK",
+						}
+						b.ftpReqChan <- ftpCmd
+					}
+				} else if b.ftpState == 2 { // GET 7. recv last digest, LIST 3
+					if data[0] == 2 {
+						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+					} else if data[0] == 1 {
+						b.ftpBufferChunk = append(b.ftpBufferChunk, data[1:]...)
+						b.ftpLocalDigest = fmt.Sprintf("%02x", md5.Sum(b.ftpBufferAll))
+						ftpRemoteDigest := string(b.ftpBufferChunk)
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpCmdType = ""
+						b.ftpState = 0
+						if (b.ftpCmdType == "CANCEL" || b.ftpLocalDigest != ftpRemoteDigest) {
 							fr := &ftpResult {
-								err: errors.New(fmt.Sprintf("unexpected data type (%d)\n", data[0])),
+								err: errors.New(fmt.Sprintf("error total digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
+								result: b.ftpBufferAll,
+							}
+							b.ftpResChan <- fr
+						} else {
+							fr := &ftpResult {
 								result: b.ftpBufferAll,
 							}
 							b.ftpResChan <- fr
 						}
+					} else {
+						b.ftpBufferChunk = b.ftpBufferChunk[:0]
+						b.ftpBufferAll = b.ftpBufferAll[:0]
+						b.ftpCmdType = ""
+						b.ftpState = 0
+						fr := &ftpResult {
+							err: errors.New(fmt.Sprintf("unexpected data type (%d)\n", data[0])),
+							result: b.ftpBufferAll,
+						}
+						b.ftpResChan <- fr
 					}
-				//}
+				}
 			}); err != nil {
 				fmt.Println(err)
 			}
