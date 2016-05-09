@@ -69,14 +69,6 @@ func (client *Client) LeftFlip() error {
 	return client.adaptor.Flip(3)
 }
 
-// XXXX check follow functions
-//func (client *Client) Apply(state State) {
-//}
-
-// XXXX check follow functions
-//func (client *Client) ApplyFor(duration time.Duration, state State) {
-//}
-
 func (client *Client) SetMaxAltitude(altitude float32) error {
 	if altitude < 2.6 || altitude > 10.0 {
 		return errors.New("altitude is out of range")
@@ -302,216 +294,127 @@ func (client *Client) Stop() {
 	client.adaptor.AddDrive(1, 0, 0, 0, 0, 0)
 }
 
-// command style
-type Commander struct {
+// Multiplexer style
+type Multiplexer struct {
 	driveParam *driveParam
 	client *Client
 }
 
-func (client *Client) NewCommander() *Commander {
-	cmd := new(Commander)
-	cmd.driveParam = new(driveParam)
-	cmd.client = client
-	return cmd
+func (client *Client) NewMultiplexer() *Multiplexer {
+	m := new(Multiplexer)
+	m.driveParam = new(driveParam)
+	m.client = client
+	return m
 }
 
-func (cmd *Commander) ContinuousMode(onOff bool) *Commander {
-        cmd.client.adaptor.SetContinuousMode(onOff)
-	return cmd
-}
-
-func (cmd *Commander) CutOutMode(onOff bool) *Commander {
-        cmd.client.adaptor.SetCutOutMode(onOff)
-	return cmd
-}
-
-func (cmd *Commander) FlatTrim() *Commander {
-        cmd.client.adaptor.FlatTrim()
-	return cmd
-}
-
-func (cmd *Commander) Emergency() *Commander {
-        cmd.client.adaptor.Emergency()
-	return cmd
-}
-
-func (cmd *Commander) Headlight(left uint8, right uint8) *Commander {
-	cmd.client.adaptor.Headlight(left, right)
-	return cmd
-}
-
-func (cmd *Commander) HeadlightFlashStart() *Commander {
-	cmd.client.adaptor.HeadlightFlashStart()
-	return cmd
-}
-
-func (cmd *Commander) HeadlightBlinkStart() *Commander {
-	cmd.client.adaptor.HeadlightBlinkStart()
-	return cmd
-}
-
-func (cmd *Commander) HeadlightOscillationStart() *Commander {
-	cmd.client.adaptor.HeadlightOscillationStart()
-	return cmd
-}
-
-func (cmd *Commander) HeadlightFlashStop() *Commander {
-	cmd.client.adaptor.HeadlightFlashStop()
-	return cmd
-}
-
-func (cmd *Commander) HeadlightBlinkStop() *Commander {
-	cmd.client.adaptor.HeadlightBlinkStop()
-	return cmd
-}
-
-func (cmd *Commander) HeadlightOscillationStop() *Commander {
-	cmd.client.adaptor.HeadlightOscillationStop()
-	return cmd
-}
-
-func (cmd *Commander) TakePicture() *Commander {
-	if cmd.client.GetPictureState() == 0 {
-		cmd.client.adaptor.TakePicture()
-	}
-	return cmd
-}
-
-func (cmd *Commander) FrontFlip() *Commander {
-	cmd.client.adaptor.Flip(0)
-	return cmd
-}
-
-func (cmd *Commander) BackFlip() *Commander {
-	cmd.client.adaptor.Flip(1)
-	return cmd
-}
-
-func (cmd *Commander) RightFlip() *Commander {
-	cmd.client.adaptor.Flip(2)
-	return cmd
-}
-
-func (cmd *Commander) LeftFlip() *Commander {
-	cmd.client.adaptor.Flip(3)
-	return cmd
-}
-
-func (cmd *Commander) Up(speedFactor uint8) *Commander {
+func (m *Multiplexer) Up(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.gaz += int8(speedFactor)
-	return cmd
+	m.driveParam.gaz += int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Down(speedFactor uint8) *Commander {
+func (m *Multiplexer) Down(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.gaz -= int8(speedFactor)
-	return cmd
+	m.driveParam.gaz -= int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Forward(speedFactor uint8) *Commander {
+func (m *Multiplexer) Forward(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.pitch += int8(speedFactor)
-	return cmd
+	m.driveParam.pitch += int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Backward(speedFactor uint8) *Commander {
+func (m *Multiplexer) Backward(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.pitch -= int8(speedFactor)
-	return cmd
+	m.driveParam.pitch -= int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Right(speedFactor uint8) *Commander {
+func (m *Multiplexer) Right(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.roll += int8(speedFactor)
-	return cmd
+	m.driveParam.roll += int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Left(speedFactor uint8) *Commander {
+func (m *Multiplexer) Left(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.roll -= int8(speedFactor)
-	return cmd
+	m.driveParam.roll -= int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) TurnRight(speedFactor uint8) *Commander {
+func (m *Multiplexer) TurnRight(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.yaw += int8(speedFactor)
-	return cmd
+	m.driveParam.yaw += int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) TurnLeft(speedFactor uint8) *Commander {
+func (m *Multiplexer) TurnLeft(speedFactor uint8) *Multiplexer {
 	if speedFactor > 100 {
 		speedFactor = 100
 	}
-	cmd.driveParam.yaw -= int8(speedFactor)
-	return cmd
+	m.driveParam.yaw -= int8(speedFactor)
+	return m
 }
 
-func (cmd *Commander) Stop() *Commander {
-	cmd.driveParam.flag = 0
-	cmd.driveParam.roll = 0
-	cmd.driveParam.pitch = 0
-	cmd.driveParam.yaw = 0
-	cmd.driveParam.gaz = 0
-	cmd.client.adaptor.AddDrive(1, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
-	return cmd
+func (m *Multiplexer) Stop() *Multiplexer {
+	m.driveParam.flag = 0
+	m.driveParam.roll = 0
+	m.driveParam.pitch = 0
+	m.driveParam.yaw = 0
+	m.driveParam.gaz = 0
+	m.client.adaptor.AddDrive(1, m.driveParam.flag, m.driveParam.roll, m.driveParam.pitch, m.driveParam.yaw, m.driveParam.gaz)
+	return m
 }
 
-func (cmd *Commander) Do(duration time.Duration) *Commander {
+func (m *Multiplexer) Exec(duration time.Duration) *Multiplexer {
 	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
-	if cmd.driveParam.roll < -100 {
-		cmd.driveParam.roll = -100
-	} else if cmd.driveParam.roll > 100{
-		cmd.driveParam.roll = 100
+	if m.driveParam.roll < -100 {
+		m.driveParam.roll = -100
+	} else if m.driveParam.roll > 100{
+		m.driveParam.roll = 100
 	}
-	if cmd.driveParam.pitch < -100 {
-		cmd.driveParam.pitch = -100
-	} else if cmd.driveParam.pitch > 100{
-		cmd.driveParam.pitch = 100
+	if m.driveParam.pitch < -100 {
+		m.driveParam.pitch = -100
+	} else if m.driveParam.pitch > 100{
+		m.driveParam.pitch = 100
 	}
-	if cmd.driveParam.yaw < -100 {
-		cmd.driveParam.yaw = -100
-	} else if cmd.driveParam.yaw > 100{
-		cmd.driveParam.yaw = 100
+	if m.driveParam.yaw < -100 {
+		m.driveParam.yaw = -100
+	} else if m.driveParam.yaw > 100{
+		m.driveParam.yaw = 100
 	}
-	if cmd.driveParam.gaz < -100 {
-		cmd.driveParam.gaz = -100
-	} else if cmd.driveParam.gaz > 100{
-		cmd.driveParam.gaz = 100
+	if m.driveParam.gaz < -100 {
+		m.driveParam.gaz = -100
+	} else if m.driveParam.gaz > 100{
+		m.driveParam.gaz = 100
 	}
-	cmd.driveParam.flag = 1
-	cmd.client.adaptor.AddDrive(tc, cmd.driveParam.flag, cmd.driveParam.roll, cmd.driveParam.pitch, cmd.driveParam.yaw, cmd.driveParam.gaz)
+	m.driveParam.flag = 1
+	m.client.adaptor.AddDrive(tc, m.driveParam.flag, m.driveParam.roll, m.driveParam.pitch, m.driveParam.yaw, m.driveParam.gaz)
 	time.Sleep(time.Duration(tc) * DriveTick * time.Millisecond)
-	return cmd
+	return m
 }
 
-func (cmd *Commander) Reset() *Commander {
-	cmd.driveParam.flag = 0
-	cmd.driveParam.roll = 0
-	cmd.driveParam.pitch = 0
-	cmd.driveParam.yaw = 0
-	cmd.driveParam.gaz = 0
-	return cmd
+func (m *Multiplexer) Reset() *Multiplexer {
+	m.driveParam.flag = 0
+	m.driveParam.roll = 0
+	m.driveParam.pitch = 0
+	m.driveParam.yaw = 0
+	m.driveParam.gaz = 0
+	return m
 }
-
-
-//func (client *Client) Clockwise(speed float64) {
-//}
-
-//func (client *Client) Counterclockwise(speed float64) {
-//}
 

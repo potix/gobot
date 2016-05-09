@@ -11,6 +11,7 @@ import (
         "errors"
         "bytes"
         "regexp"
+        "ioutil"
         "crypto/md5"
 	"encoding/binary"
 
@@ -21,6 +22,7 @@ import (
 
 // drive tick times (millisecond)
 const DriveTick = 25
+const FTPTimeout = 30
 
 // TODO: handle other OS defaults besides Linux
 var DefaultClientOptions = []gatt.Option{
@@ -400,14 +402,22 @@ func (b *Adaptor) TakePicture() error {
         return b.writeCharBase("9a66fa000800919111e4012d1540cb8e", "9a66fa0b0800919111e4012d1540cb8e", 0x04, 0xfa0b, 0x02, 0x06, 0x01, nil)
 }
 
+func (b *Adaptor) ftpCmdBase(ftpCmd *ftpCommand) ([]byte, error) {
+	b.ftpReqChan <- ftpCmd
+	select {
+	case fr := <-b.ftpResChan
+		return fr.result, fr.err
+	case <-time.After(FTPTimeout * time.Second):
+		return nil, errors.New("ftp cmd timeout")
+	}
+}
+
 func (b *Adaptor) FTPList(path string) ([]byte, error) {
 	ftpCmd := &ftpCommand {
 		cmd: "LIS",
 		path: path,
 	}
-	b.ftpReqChan <- ftpCmd
-	fr := <-b.ftpResChan
-	return fr.result, fr.err
+	return b.ftpCmdBase(ftpCmd)
 }
 
 func (b *Adaptor) FTPGet(path string) ([]byte, error) {
@@ -415,9 +425,7 @@ func (b *Adaptor) FTPGet(path string) ([]byte, error) {
 		cmd: "GET",
 		path: path,
 	}
-	b.ftpReqChan <- ftpCmd
-	fr := <-b.ftpResChan
-	return fr.result, fr.err
+	return b.ftpCmdBase(ftpCmd)
 }
 
 func (b *Adaptor) FTPDelete(path string) ([]byte, error) {
@@ -425,9 +433,7 @@ func (b *Adaptor) FTPDelete(path string) ([]byte, error) {
 		cmd: "DEL",
 		path: path,
 	}
-	b.ftpReqChan <- ftpCmd
-	fr := <-b.ftpResChan
-	return fr.result, fr.err
+	return b.ftpCmdBase(ftpCmd)
 }
 
 func (b *Adaptor) GetBattery() uint8 {
@@ -672,6 +678,7 @@ func (b *Adaptor) autoDownloadLoop() {
 	var result []byte
 	var err error
 	var rpath string
+	var rs string
 	for {
 		result, err = b.FTPList("/internal_000")
 		if err == nil {
@@ -683,7 +690,7 @@ func (b *Adaptor) autoDownloadLoop() {
 			return
 		}
 	}
-	s := string(result)
+	rs = string(result)
 	for _, s = range strings.Split(s, "\n") {
 		re:= regexp.MustCompile("^[^ \t]+[ \t]+[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+(Airborne[^ \t\n]+)")
 		group := re.FindStringSubmatch(s)
@@ -712,6 +719,7 @@ func (b *Adaptor) autoDownloadLoop() {
 			if !m {
 				continue
 			}
+			failcnt = 0
 			for {
 				result, err = b.FTPList(rpath)
 				if err == nil {
@@ -723,9 +731,45 @@ func (b *Adaptor) autoDownloadLoop() {
 					break next
 				}
 			}
-			println(string(result))
-			// download files
-			// delete downloaded files
+			rs = string(result)
+			for _, s = range strings.Split(s, "\n") {
+				re:= regexp.MustCompile("^[^ \t]+[ \t]+[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+[0-9]+[ \t]+([^ \t]+\.pud)")
+				group := re.FindStringSubmatch(s)
+				if len(group) < 2 {
+					continue
+				}
+				rfpath := fmt.Sprintf("%s/%s", rpath, group[1])
+				failcnt = 0
+				cont:
+				for {
+					result, err = b.FTPGet(rfpath)
+					if err == nil {
+						break
+					}
+					failcnt += 1
+					if failcnt > 2 {
+						fmt.Println("give up ftp get")
+						break cont
+					}
+				}
+				lfprefix := time.Now().UNIX()
+				lfpath := fmt.Sprintf("%s/%d_%s" , b.downloadPath, lfprefix, group[1])
+				if err := ioutil.WriteFile(lfpath, result, 0644); err != nil {
+					fmt.Println("could not write file")
+					continue
+				}
+				for {
+					result, err = b.FTPDelete(rfpath)
+					if err == nil {
+						break
+					}
+					failcnt += 1
+					if failcnt > 2 {
+						fmt.Println("give up ftp delete")
+						break cont
+					}
+				}
+			}
 		case <-b.autoDownloadEnd:
 			break loop
 		}

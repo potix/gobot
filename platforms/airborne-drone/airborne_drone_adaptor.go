@@ -54,7 +54,7 @@ type drone interface {
 	TurnLeft(speedFactor int8)
 	TurnRight(speedFactor int8)
 	Stop()
-	NewCommander() *client.Commander
+	NewMultiplexer() *client.Multiplexer
 }
 
 // AirborneDroneAdaptor is gobot.Adaptor representation for the AirborneDrone

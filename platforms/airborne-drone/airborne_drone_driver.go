@@ -267,8 +267,8 @@ func (a *AirborneDroneDriver) Hover() {
 	a.adaptor().drone.Hover()
 }
 
-// NewCommander causes the drone to create commander
-func (a *AirborneDroneDriver) NewCommander() *client.Commander {
-	return a.adaptor().drone.NewCommander()
+// NewMultiplexer causes the drone to create multiplexer
+func (a *AirborneDroneDriver) NewMultiplexer() *client.Multiplexer {
+	return a.adaptor().drone.NewMultiplexer()
 }
 
