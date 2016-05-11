@@ -24,6 +24,7 @@ type drone interface {
 	SetContinuousMode(onOff bool)
 	SetAutoDownloadMode(onOff bool)
 	SetCutOutMode(onOff bool) error
+	ForceDownload()
 	FlatTrim() error
 	Emergency() error
 	Headlight(left uint8, right uint8) error

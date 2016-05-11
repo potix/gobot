@@ -480,6 +480,10 @@ func (b *Adaptor) SetAutoDownloadMode (autoDownloadMode bool) {
 	b.autoDownloadMode = autoDownloadMode
 }
 
+func (b *Adaptor) ForceDownload () {
+	b.autoDownloadChan <- true
+}
+
 func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqid uint16, prjid uint8, clsid uint8, cmdid uint16, data []byte) error {
 	var ok bool
 	var bles *BLEService
@@ -719,7 +723,6 @@ func (b *Adaptor) autoDownloadLoop() {
 	}
 	loop:
 	for {
-		next:
 		select {
 		case <-b.autoDownloadChan:
 			b.autoDownloadMutex.Lock()
@@ -737,9 +740,9 @@ func (b *Adaptor) autoDownloadLoop() {
 						break
 					}
 				}
-				if result == nil {
+				if err != nil {
 					fmt.Println("give up ftp list")
-					break next
+					continue
 				}
 				rs = string(result)
 				// -- debug --
@@ -766,7 +769,7 @@ func (b *Adaptor) autoDownloadLoop() {
 							break
 						}
 					}
-					if result == nil {
+					if err != nil {
 						fmt.Println("give up ftp get")
 						continue
 					}
@@ -783,7 +786,7 @@ func (b *Adaptor) autoDownloadLoop() {
 							break
 						}
 					}
-					if result == nil {
+					if err != nil {
 						fmt.Println("give up ftp delete")
 						continue
 					}
@@ -1460,7 +1463,6 @@ func (b *Adaptor) discoveryService() error {
 						if (b.ftpCmdType == "CANCEL" || b.ftpLocalDigest != ftpRemoteDigest) {
 							fr := &ftpResult {
 								err: errors.New(fmt.Sprintf("error total digest mismatch (local %s, remote %s)", b.ftpLocalDigest, ftpRemoteDigest)),
-								result: b.ftpBufferAll,
 							}
 							b.ftpResChan <- fr
 						} else {
@@ -1476,7 +1478,6 @@ func (b *Adaptor) discoveryService() error {
 						b.ftpState = 0
 						fr := &ftpResult {
 							err: errors.New(fmt.Sprintf("unexpected data type (%d)\n", data[0])),
-							result: b.ftpBufferAll,
 						}
 						b.ftpResChan <- fr
 					}

@@ -116,6 +116,11 @@ func (a *AirborneDroneDriver) SetCutOutMode(onOff bool) error {
 	return a.adaptor().drone.SetCutOutMode(onOff)
 }
 
+// ForceDownload causes the drone to force download
+func (a *AirborneDroneDriver) ForceDownload() {
+	a.adaptor().drone.ForceDownload()
+}
+
 // FlatTrim causes the drone to FlatTrim
 func (a *AirborneDroneDriver) FlatTrim() error {
 	return a.adaptor().drone.FlatTrim()

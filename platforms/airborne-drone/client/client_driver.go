@@ -113,6 +113,10 @@ func (client *Client) SetCutOutMode(onOff bool) error {
 	return client.adaptor.SetCutOutMode(onOff)
 }
 
+func (client *Client) ForceDownload() {
+	client.adaptor.ForceDownload()
+}
+
 func (client *Client) FlatTrim() error {
 	return client.adaptor.FlatTrim()
 }
