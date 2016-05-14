@@ -11,8 +11,6 @@ import (
 )
 
 func main() {
-	finishChan := make(chan bool)
-
 	gbot := gobot.NewGobot()
 
 	a := api.NewAPI(gbot)
@@ -33,7 +31,6 @@ func main() {
 		drone.SetCutOutMode(true)
 		drone.SetAutoDownloadMode(true)
 		drone.SetContinuousMode(true)
-		<-finishChan
 	}
 
 	robot := gobot.NewRobot("airbone_drone_swat_01",
@@ -44,10 +41,6 @@ func main() {
 
 	gbot.AddRobot(robot)
 
-	robot.AddCommand("finish", func(params map[string]interface{}) interface{} {
-		close(finishChan)
-		return fmt.Sprintf("ok %v", robot.Name)
-	})
 	robot.AddCommand("take_off", func(params map[string]interface{}) interface{} {
 		drone.TakeOff()
 		return fmt.Sprintf("ok %v", robot.Name)
