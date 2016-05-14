@@ -375,17 +375,16 @@ func (m *Multiplexer) TurnLeft(speedFactor uint8) *Multiplexer {
 	return m
 }
 
-func (m *Multiplexer) Stop() *Multiplexer {
+func (m *Multiplexer) Reset() *Multiplexer {
 	m.driveParam.flag = 0
 	m.driveParam.roll = 0
 	m.driveParam.pitch = 0
 	m.driveParam.yaw = 0
 	m.driveParam.gaz = 0
-	m.client.adaptor.AddDrive(1, m.driveParam.flag, m.driveParam.roll, m.driveParam.pitch, m.driveParam.yaw, m.driveParam.gaz)
 	return m
 }
 
-func (m *Multiplexer) Exec(duration time.Duration) *Multiplexer {
+func (m *Multiplexer) Go(duration time.Duration) *Multiplexer {
 	tc := int(duration/time.Duration(DriveTick * time.Millisecond))
 	if m.driveParam.roll < -100 {
 		m.driveParam.roll = -100
@@ -412,13 +411,3 @@ func (m *Multiplexer) Exec(duration time.Duration) *Multiplexer {
 	time.Sleep(time.Duration(tc) * DriveTick * time.Millisecond)
 	return m
 }
-
-func (m *Multiplexer) Reset() *Multiplexer {
-	m.driveParam.flag = 0
-	m.driveParam.roll = 0
-	m.driveParam.pitch = 0
-	m.driveParam.yaw = 0
-	m.driveParam.gaz = 0
-	return m
-}
-

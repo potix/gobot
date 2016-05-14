@@ -15,7 +15,6 @@ func NewGattGapService() *gatt.Service {
 	s.AddCharacteristic(attrDeviceName).HandleReadFunc(
 		func(rsp gatt.ResponseWriter, req *gatt.ReadRequest) {
 			v := []byte{ 'g', 'o', 'b', 'o', 't' }
-			fmt.Println("$ Device Name Read Handler")
 			_, error := rsp.Write(v)
 			if error != nil {
 				fmt.Println(error)
