@@ -1,20 +1,31 @@
 package main
 
 import (
-	_"fmt"
+	"fmt"
 	"time"
+        "html"
+	"net/http"
 
 	"github.com/potix/gobot"
+	"github.com/potix/gobot/api"
 	"github.com/potix/gobot/platforms/airborne-drone"
 )
 
 func main() {
 	gbot := gobot.NewGobot()
 
+	a := api.NewAPI(gbot)
+        a.AddHandler(func(w http.ResponseWriter, r *http.Request) {
+                fmt.Fprintf(w, "Hello, %q \n", html.EscapeString(r.URL.Path))
+        })
+        a.Debug()
+        a.Start()
+
 	airborneDroneAdaptor := airbornedrone.NewAirborneDroneAdaptor("swat", "E0:14:0A:BF:3D:80", "/var/tmp/airborn_drone")
-	drone := airbornedrone.NewAirborneDroneDriver(airborneDroneAdaptor, "swat")
+	drone := airbornedrone.NewAirborneDroneDriver(airborneDroneAdaptor, "drone")
 
 	work := func() {
+/*
 		gobot.On(drone.Event("flying"), func(data interface{}) {
 			gobot.After(3*time.Second, func() {
 				m := drone.NewMultiplexer()
@@ -47,6 +58,10 @@ func main() {
 		drone.SetAutoDownloadMode(true)
 		drone.SetContinuousMode(false)
 		drone.TakeOff()
+*/
+		for  {
+			time.Sleep(time.Duration(1 * time.Second))
+		}
 	}
 
 	robot := gobot.NewRobot("airbone_drone",
@@ -55,6 +70,10 @@ func main() {
 		work,
 	)
 	gbot.AddRobot(robot)
+
+	robot.AddCommand("hi_there", func(params map[string]interface{}) interface{} {
+		return fmt.Sprintf("This command is attached to the robot %v", robot.Name)
+	})
 
 	gbot.Start()
 }

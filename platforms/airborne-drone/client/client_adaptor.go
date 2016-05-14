@@ -404,7 +404,6 @@ func (b *Adaptor) TakePicture() error {
 }
 
 func (b *Adaptor) ftpCmdBase(ftpCmd *ftpCommand) ([]byte, error) {
-	fmt.Printf("FTP: %s%s\n", ftpCmd.cmd, ftpCmd.path)
 	b.ftpBufferAll = b.ftpBufferAll[:0]
 	b.ftpBufferChunk = b.ftpBufferChunk[:0]
 	b.ftpCmdType = ""
@@ -510,8 +509,6 @@ func (b *Adaptor) writeCharBase(srvid string, charid string, reqtype uint8, seqi
 	if data != nil {
 		value = append(value[:6], data...)
 	}
-	//--- debug ---
-	// fmt.Printf("char = %s, write = %02x\n", blec.uuid, value[:size])
 	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value, true); err != nil {
 		return err
 	}
@@ -530,8 +527,6 @@ func (b *Adaptor) ftpWriteCharBase(srvid string, charid string, data []byte, siz
 	if !ok {
 		return errors.New("not found characteristic")
 	}
-	//--- debug ---
-	//fmt.Printf("char = %s, write = %02x\n", blec.uuid, data[:size])
 	if err := b.peripheral.WriteCharacteristic(blec.characteristic, data[:size], true); err != nil {
 		return err
 	}
@@ -588,8 +583,6 @@ func (b *Adaptor) driveLoop() {
 				skipcnt = 0
 			}
 			if dp.pcmd {
-				// --- debug ---
-				//fmt.Printf(">>> %v\n", dp)
 				millisec := uint32(t.Sub(start).Seconds() * 1000)
 				data := make([]byte, 9, 9)
 				data[0] = byte(dp.flag)
@@ -711,11 +704,9 @@ func (b *Adaptor) autoDownloadLoop() {
 		fmt.Println("could not start auto download (not found /internal_000/Airborn*)")
 		return
 	}
-	fmt.Printf("remote base path = %s\n", rpath)
 	tpl := [...]string{ "media", "academy", "thumb" }
 	for _, tp := range tpl {
 		lp := fmt.Sprintf("%s/%s/", b.downloadPath, tp)
-		fmt.Printf("local path = %s\n", lp)
 		if err = os.MkdirAll(lp, 0755); err != nil {
 			fmt.Printf("could not start auto download (could not creat local path %s)\n", lp)
 			return
@@ -733,7 +724,6 @@ func (b *Adaptor) autoDownloadLoop() {
 			}
 			for _, tp := range tpl {
 				rp := fmt.Sprintf("%s/%s/", rpath, tp)
-				fmt.Println("remote path = %s\n", rp)
 				for i := 0; i < 3; i++ {
 					result, err = b.FTPList(rp)
 					if err == nil {
@@ -745,11 +735,7 @@ func (b *Adaptor) autoDownloadLoop() {
 					continue
 				}
 				rs = string(result)
-				// -- debug --
-				//fmt.Println(rs)
 				for _, ln := range strings.Split(rs, "\n") {
-					// -- debug --
-					//fmt.Println(ln)
 					var re *regexp.Regexp
 					if tp == "academy" {
 						re = regexp.MustCompile(`^\S+\s+\d+\s+\S+\s+\S+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\S+\.pud)`)
@@ -761,8 +747,6 @@ func (b *Adaptor) autoDownloadLoop() {
 						continue
 					}
 					rfpath := fmt.Sprintf("%s/%s", rp, group[1])
-					// -- debug --
-					//fmt.Println(rfpath)
 					for i := 0; i < 3; i++ {
 						result, err = b.FTPGet(rfpath)
 						if err == nil {
@@ -775,9 +759,9 @@ func (b *Adaptor) autoDownloadLoop() {
 					}
 					lfprefix := time.Now().Unix()
 					lfpath := fmt.Sprintf("%s/%s/%d_%s" , b.downloadPath, tp, lfprefix, group[1])
-					fmt.Printf("write file = %s\n", lfpath)
 					if err := ioutil.WriteFile(lfpath, result, 0644); err != nil {
-						fmt.Println("could not write file")
+						fmt.Printf("could not write file (%s)", lfpath)
+						fmt.Println(err)
 						continue
 					}
 					for i := 0; i < 3; i++ {
@@ -849,14 +833,12 @@ func (b *Adaptor) ReadCharacteristic(sUUID string, cUUID string) (data []byte, e
 }
 
 func (b *Adaptor) onStateChanged(d gatt.Device, s gatt.State) {
-	fmt.Println("State:", s)
 	b.state = s
 	switch s {
 	case gatt.StatePoweredOn:
 		// set service
 		d.AddService(service.NewGattGapService())
 		// start scan
-		fmt.Println("scanning...")
 		d.Scan([]gatt.UUID{}, false)
 		return
 	default:
@@ -873,18 +855,13 @@ func (b *Adaptor) onPeripheralDiscovered(p gatt.Peripheral, a *gatt.Advertisemen
 
 	// manufacturer
         ms := fmt.Sprintf("%x", a.ManufacturerData)
-        fmt.Printf("manufacturer = %s\n", ms)
-
-	// name
-	fmt.Printf("name = %s\n", p.Name())
 
 	// check device
 	if !strings.HasPrefix(p.Name(), "Swat_") && !strings.HasPrefix(p.Name(), "Maclan_") && ms != "4300cf1907090100" {
 		// not match device
+		fmt.Printf("mismatch device (name = %s, manufacturer = %s)\n", p.Name(), ms)
 		return
 	}
-
-	fmt.Printf("device match\n")
 
 	// Stop scanning once we've got the peripheral we're looking for.
 	p.Device().StopScanning()
@@ -905,10 +882,10 @@ func (b *Adaptor) onPeripheralConnected(p gatt.Peripheral, err error) {
 
 func (b *Adaptor) onPeripheralDisconnected(p gatt.Peripheral, err error) {
 	fmt.Println("Disconnected")
+	// TODO Reconnect
 }
 
 func (b *Adaptor) setMTU(mtu uint16) error {
-	fmt.Println("setMTU")
 	if err := b.peripheral.SetMTU(mtu); err != nil {
 		fmt.Printf("Failed to set MTU, err: %s\n", err)
 		return err
@@ -1281,10 +1258,12 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 	bles, ok = b.services[ressrvid]
 	if !ok {
 		fmt.Println("not found service")
+		return
 	}
 	blec, ok = bles.characteristics[rescharid]
 	if !ok {
 		fmt.Println("not found characteristic")
+		return
 	}
 	value := make([]byte, 0, 3)
 	b.seqMutex.Lock()
@@ -1292,8 +1271,6 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 	b.seq[resseqid] += 1
 	b.seqMutex.Unlock()
 	value = append(value, 0x01, resseq, reqseq)
-	//--- debug ---
-	// fmt.Printf("char = %s, write = %02x\n", blec.uuid, value[:3])
 	if err := b.peripheral.WriteCharacteristic(blec.characteristic, value[:3], true); err != nil {
 		fmt.Printf("notification response failure\n", err)
 		return
@@ -1301,7 +1278,6 @@ func (b *Adaptor) notificationBase(c *gatt.Characteristic, data []byte, err erro
 }
 
 func (b *Adaptor) discoveryService() error {
-	fmt.Println("discoveryService")
 	ss, err := b.peripheral.DiscoverServices(nil)
 	if err != nil {
 		fmt.Printf("Failed to discover services, err: %s\n", err)
@@ -1309,8 +1285,6 @@ func (b *Adaptor) discoveryService() error {
 	}
 	for _, s := range ss {
 		b.services[s.UUID().String()] = NewBLEService(s.UUID().String(), s)
-		fmt.Printf("\t%s\n", s.UUID().String())
-		fmt.Println("\tdiscoveryCharacteristic")
 		cs, err := b.peripheral.DiscoverCharacteristics(nil, s)
 		if err != nil {
 			fmt.Printf("Failed to discover characteristics, err: %s\n", err)
@@ -1318,8 +1292,6 @@ func (b *Adaptor) discoveryService() error {
 		}
 		for _, c := range cs {
 			b.services[s.UUID().String()].characteristics[c.UUID().String()] = NewBLECharacteristic(c.UUID().String(), c)
-			fmt.Printf("\t\t%s\n", c.UUID().String())
-			fmt.Println("\t\tdiscoveryDescriptor")
 			ds, err := b.peripheral.DiscoverDescriptors(nil, c)
 			if err != nil {
 				fmt.Printf("Failed to discover discriptors, err: %s\n", err)
@@ -1327,7 +1299,6 @@ func (b *Adaptor) discoveryService() error {
 			}
 			for _, d := range ds {
 				b.services[s.UUID().String()].characteristics[c.UUID().String()].descriptors[d.UUID().String()] = NewBLEDescriptor(d.UUID().String(), d)
-				fmt.Printf("\t\t\t%s\n", d.UUID().String())
 			}
 		}
 	}
@@ -1336,7 +1307,7 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fb0f0800919111e4012d1540cb8e"]; ok {
 			// notify (request with no response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				fmt.Println("-Notification REQ fb0f-")
+				// -Notification REQ fb0f-
 				b.notificationBase(c, data, err, true, "", "", 0)
 			}); err != nil {
 				fmt.Println(err)
@@ -1345,7 +1316,7 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fb0e0800919111e4012d1540cb8e"]; ok {
 			// notify (request with need response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				fmt.Println("-Notification REQ fb0e-")
+				// -Notification REQ fb0e-
 				b.notificationBase(c, data, err, false, "9a66fa000800919111e4012d1540cb8e", "9a66fa1e0800919111e4012d1540cb8e", 0xfa1e)
 			}); err != nil {
 				fmt.Println(err)
@@ -1354,8 +1325,8 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fb1b0800919111e4012d1540cb8e"]; ok {
 			// notify (response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				fmt.Println("Notification -RES fb1b-")
-				fmt.Printf("%02x\n", data)
+				// Notification -RES fb1b-
+				// fmt.Printf("%02x\n", data)
 				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
@@ -1364,8 +1335,8 @@ func (b *Adaptor) discoveryService() error {
 		if blec, ok := bles.characteristics["9a66fb1c0800919111e4012d1540cb8e"]; ok {
 			// notify (low latency response on arnetwork)
 			if err := b.peripheral.SetNotifyValue(blec.characteristic, func(c *gatt.Characteristic, data []byte, err error){
-				fmt.Println("-Notification RES fb1c-")
-				fmt.Printf("%02x\n", data)
+				// -Notification RES fb1c-
+				// fmt.Printf("%02x\n", data)
 				// TODO check seq
 			}); err != nil {
 				fmt.Println(err)
