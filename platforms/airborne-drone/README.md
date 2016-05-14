@@ -22,7 +22,7 @@ import (
 func main() {
         gbot := gobot.NewGobot()
 
-        airborneDroneAdaptor := airborneDrone.NewAirborneDroneAdaptor("swat", "01:23:45:67:89:AB", "hci0")
+        airborneDroneAdaptor := airborneDrone.NewAirborneDroneAdaptor("swat", "01:23:45:67:89:AB", "/path/to/auto/download")
         drone := airborneDrone.NewAirborneDroneDriver(airborneDroneAdaptor, "swat")
 
         work := func() {
