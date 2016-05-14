@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"time"
-        _"html"
-	_"net/http"
 
 	"github.com/potix/gobot"
 	"github.com/potix/gobot/api"
@@ -42,7 +40,9 @@ func main() {
 		[]gobot.Device{drone},
 		work,
 	)
+
 	gbot.AddRobot(robot)
+
 	robot.AddCommand("finish", func(params map[string]interface{}) interface{} {
 		close(finishChan)
 		return fmt.Sprintf("ok %v", robot.Name)
@@ -627,7 +627,6 @@ func main() {
 		}
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
-
 
 	gbot.Start()
 }
