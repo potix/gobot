@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+	"reflect"
 
 	"github.com/potix/gobot"
 	"github.com/potix/gobot/api"
@@ -77,11 +78,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no value %v", robot.Name)
 		}
-		v, ok := vi.(float32)
+		v, ok := vi.(float64)
 		if !ok {
 			return fmt.Sprintf("value is not float %v, value %v", robot.Name, v)
 		}
-		drone.SetMaxAltitude(v)
+		if v < 2 || v > 10 {
+			return fmt.Sprintf("value is out of range %v, value %v", robot.Name, v)
+		}
+		drone.SetMaxAltitude(float32(v))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("max_tilt", func(params map[string]interface{}) interface{} {
@@ -90,11 +94,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no value %v", robot.Name)
 		}
-		v, ok := vi.(float32)
+		v, ok := vi.(float64)
 		if !ok {
 			return fmt.Sprintf("value is not float %v, value %v", robot.Name, v)
 		}
-		drone.SetMaxTilt(v)
+		if v < 5 || v > 25 {
+			return fmt.Sprintf("value is out of range %v, value %v", robot.Name, v)
+		}
+		drone.SetMaxTilt(float32(v))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("max_virtical_speed", func(params map[string]interface{}) interface{} {
@@ -103,11 +110,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no value %v", robot.Name)
 		}
-		v, ok := vi.(float32)
+		v, ok := vi.(float64)
 		if !ok {
 			return fmt.Sprintf("value is not float %v, value %v", robot.Name, v)
 		}
-		drone.SetMaxVirticalSpeed(v)
+		if v < 0.5 || v > 2 {
+			return fmt.Sprintf("value is out of range %v, value %v", robot.Name, v)
+		}
+		drone.SetMaxVirticalSpeed(float32(v))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("max_rotation_speed", func(params map[string]interface{}) interface{} {
@@ -116,11 +126,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no value %v", robot.Name)
 		}
-		v, ok := vi.(float32)
+		v, ok := vi.(float64)
 		if !ok {
 			return fmt.Sprintf("value is not bool %v, value %v", robot.Name, v)
 		}
-		drone.SetMaxRotationSpeed(v)
+		if v < 50 || v > 360 {
+			return fmt.Sprintf("value is out of range %v, value %v", robot.Name, v)
+		}
+		drone.SetMaxRotationSpeed(float32(v))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("continuous_mode", func(params map[string]interface{}) interface{} {
@@ -180,19 +193,25 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no left %v", robot.Name)
 		}
-		left, ok := lefti.(uint8)
+		left, ok := lefti.(float64)
 		if !ok {
 			return fmt.Sprintf("left is not uint8 %v, value %v", robot.Name, left)
+		}
+		if left < 0 || left > 255 {
+			return fmt.Sprintf("left is out of range %v, value %v", robot.Name, left)
 		}
 		righti, ok := params["right"]
 		if !ok {
 			return fmt.Sprintf("no right %v", robot.Name)
 		}
-		right, ok := righti.(uint8)
+		right, ok := righti.(float64)
 		if !ok {
 			return fmt.Sprintf("right is not uint8 %v, value %v", robot.Name, right)
 		}
-		drone.Headlight(left, right)
+		if right < 0 || right > 255 {
+			return fmt.Sprintf("left is out of range %v, value %v", robot.Name, left)
+		}
+		drone.Headlight(uint8(left), uint8(right))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("headlight_flash", func(params map[string]interface{}) interface{} {
@@ -267,7 +286,7 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no msec %v", robot.Name)
 		}
-		msec, ok := mseci.(time.Duration)
+		msec, ok := mseci.(float64)
 		if !ok {
 			return fmt.Sprintf("msec is not uint %v, value %v", robot.Name, msec)
 		}
@@ -278,14 +297,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
 			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < -100 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Roll(time.Duration(msec * time.Millisecond), speed)
+		drone.Roll(time.Duration(msec) * time.Millisecond, int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("pitch", func(params map[string]interface{}) interface{} {
@@ -294,7 +313,7 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no msec %v", robot.Name)
 		}
-		msec, ok := mseci.(time.Duration)
+		msec, ok := mseci.(float64)
 		if !ok {
 			return fmt.Sprintf("msec is not uint %v, value %v", robot.Name, msec)
 		}
@@ -305,14 +324,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
 			return fmt.Sprintf("speedis not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < -100 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Pitch(time.Duration(msec * time.Millisecond), speed)
+		drone.Pitch(time.Duration(msec) * time.Millisecond, int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("yaw", func(params map[string]interface{}) interface{} {
@@ -321,7 +340,7 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no msec %v", robot.Name)
 		}
-		msec, ok := mseci.(time.Duration)
+		msec, ok := mseci.(float64)
 		if !ok {
 			return fmt.Sprintf("msec is not uint %v, value %v", robot.Name, msec)
 		}
@@ -333,14 +352,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
 			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < -100 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Yaw(time.Duration(msec * time.Millisecond), speed)
+		drone.Yaw(time.Duration(msec) * time.Millisecond, int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("gaz", func(params map[string]interface{}) interface{} {
@@ -349,7 +368,7 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no msec %v", robot.Name)
 		}
-		msec, ok := mseci.(time.Duration)
+		msec, ok := mseci.(float64)
 		if !ok {
 			return fmt.Sprintf("msec is not uint %v, value %v", robot.Name, msec)
 		}
@@ -361,14 +380,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
 			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < -100 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Gaz(time.Duration(msec * time.Millisecond), speed)
+		drone.Gaz(time.Duration(msec) * time.Millisecond, int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("hover", func(params map[string]interface{}) interface{} {
@@ -381,14 +400,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
 			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Up(speed)
+		drone.Up(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("down", func(params map[string]interface{}) interface{} {
@@ -397,14 +416,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Down(speed)
+		drone.Down(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("left", func(params map[string]interface{}) interface{} {
@@ -413,14 +432,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Left(speed)
+		drone.Left(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("right", func(params map[string]interface{}) interface{} {
@@ -429,14 +448,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speedis not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speedis not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Right(speed)
+		drone.Right(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("forward", func(params map[string]interface{}) interface{} {
@@ -445,14 +464,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Forward(speed)
+		drone.Forward(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("backward", func(params map[string]interface{}) interface{} {
@@ -461,14 +480,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.Backward(speed)
+		drone.Backward(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("turn_left", func(params map[string]interface{}) interface{} {
@@ -477,14 +496,17 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+
+		fmt.Println(reflect.TypeOf(speedi).Kind())
+
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.TurnLeft(speed)
+		drone.TurnLeft(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("turn_right", func(params map[string]interface{}) interface{} {
@@ -493,14 +515,14 @@ func main() {
 		if !ok {
 			return fmt.Sprintf("no speed %v", robot.Name)
 		}
-		speed, ok := speedi.(int8)
+		speed, ok := speedi.(float64)
 		if !ok {
-			return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
+			return fmt.Sprintf("speed is not int8 %v, value %v", robot.Name, speed)
 		}
 		if speed < 0 || speed > 100 {
 			return fmt.Sprintf("speed is out of range %v, value %v", robot.Name, speed)
 		}
-		drone.TurnRight(speed)
+		drone.TurnRight(int8(speed))
 		return fmt.Sprintf("ok %v", robot.Name)
 	})
 	robot.AddCommand("stop", func(params map[string]interface{}) interface{} {
@@ -535,94 +557,94 @@ func main() {
 				if !ok {
 					break
 				}
-				msec, ok := mseci.(time.Duration)
+				msec, ok := mseci.(float64)
 				if !ok {
 					break
 				}
 				if msec < 0 {
 					break
 				}
-				m.Go(msec)
+				m.Go(time.Duration(msec) * time.Millisecond)
 			case "up":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Up(speed)
+				m.Up(uint8(speed))
 			case "down":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Down(speed)
+				m.Down(uint8(speed))
 			case "forward":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Forward(speed)
+				m.Forward(uint8(speed))
 			case "backward":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Backward(speed)
+				m.Backward(uint8(speed))
 			case "left":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Left(speed)
+				m.Left(uint8(speed))
 			case "right":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.Right(speed)
+				m.Right(uint8(speed))
 			case "turnLeft":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.TurnLeft(speed)
+				m.TurnLeft(uint8(speed))
 			case "turnRight":
 				speedi, ok := params["speed"]
 				if !ok {
 					return fmt.Sprintf("no speed %v", robot.Name)
 				}
-				speed, ok := speedi.(uint8)
+				speed, ok := speedi.(float64)
 				if !ok {
 					return fmt.Sprintf("speed is not uint8 %v, value %v", robot.Name, speed)
 				}
-				m.TurnRight(speed)
+				m.TurnRight(uint8(speed))
 			}
 		}
 		return fmt.Sprintf("ok %v", robot.Name)
