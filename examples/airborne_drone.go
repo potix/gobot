@@ -24,7 +24,7 @@ func main() {
 		gobot.On(drone.Event("flying"), func(data interface{}) {
 			fmt.Println("flying")
 		})
-		drone.SetMaxAltitude(5)
+		drone.SetMaxAltitude(6)
 		drone.SetMaxTilt(15)
 		drone.SetMaxVirticalSpeed(1.225)
 		drone.SetMaxRotationSpeed(205)
